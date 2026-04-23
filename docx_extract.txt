@@ -1,0 +1,235 @@
+Pestaña 1
+Suplementos Grizzly
+Tienda Web
+10 de marzo de 2026
+Objetivo del sistema
+El sistema tiene como objetivo proporcionar al emprendimiento de suplementos deportivos una plataforma web para la gestión integral de su catálogo, pedidos y ventas, permitiendo que los clientes puedan explorar productos, generar pedidos y concretar la compra mediante contacto directo con el vendedor a través de WhatsApp.
+La solución busca digitalizar y ordenar el proceso comercial del negocio, facilitando la toma de pedidos, el control de stock, la gestión de promociones y el seguimiento de ventas, sin depender inicialmente de una pasarela de pago automática.
+Desde el punto de vista del cliente, el sistema permitirá consultar el catálogo de productos, filtrar y buscar suplementos, visualizar promociones vigentes, agregar productos a un carrito y generar un pedido, el cual será enviado automáticamente al vendedor mediante un mensaje prearmado de WhatsApp con el detalle completo de la orden.
+Desde el punto de vista del emprendimiento, el sistema brindará un panel administrativo para gestionar productos, promociones, pedidos, clientes y stock, permitiendo registrar pagos, actualizar el estado de los pedidos, preparar envíos o retiros y mantener un control ordenado de las operaciones comerciales.
+De esta manera, el sistema busca simplificar el proceso de venta para el negocio y mejorar la experiencia de compra del cliente, combinando la facilidad de uso de una tienda online con la flexibilidad de cerrar las ventas mediante comunicación directa con el vendedor.
+Especificaciones:
+Cliente
+Entra a la web.
+Busca productos.
+Filtra por categoría / marca.
+Agrega productos al carrito.
+Revisa promociones.
+Confirma el pedido.
+Completa sus datos:
+Nombre
+Teléfono
+D.n.i
+forma de entrega Envio/Retiro presencial
+Si es retiro presencial dejar una observación para el vendedor:
+nombre de quien retira
+franja horaria opcional
+Si es envio aparece un formulario para rellenar Dirección/Localidad/Código postal
+A CONFIRMAR
+Hace clic en “Finalizar pedido” y lo redirecciona a whatsapp con la orden de pedido con precios y observación en forma de mensaje.
+El sistema:
+guarda la orden en base de datos
+genera un número de pedido
+redirige a WhatsApp con mensaje prearmado
+Vendedor / admin
+Recibe el mensaje con el detalle del pedido.
+El stock queda reservado cuando el vendedor confirma disponibilidad y cambia el pedido a “Pendiente de pago”. El descuento definitivo del stock se realiza únicamente cuando el admin confirma el pago.
+Confirma disponibilidad.
+Pasa alias / CBU / link de pago.
+El cliente paga.
+El admin podrá actualizar el estado del pedido según la instancia comercial y de pago: pendiente de pago, pago informado, pago confirmado o rechazado/cancelado.
+Al mismo tiempo podrá definir el estado del pedido en :
+Pendiente de confirmación El vendedor todavía no respondió o no validó el stock.
+Pendiente de pago El vendedor pasó alias.
+Pago informado El cliente indica que realizó el pago y puede adjuntar o enviar el comprobante para su verificación.
+Pago confirmado El admin verificó el pago, el stock se descuenta del inventario.
+En preparación Se está armando el pedido.
+Despachado / enviado Ya salió para entrega.
+Entregado Pedido finalizado.
+Cancelado El cliente podrá cancelar un pedido mientras no se encuentre en estado Pago confirmado o En preparación.El administrador podrá cancelar pedidos en cualquier estado previo a la entrega.
+Vencido Si el cliente no informa el pago dentro de las 24 horas posteriores al estado Pendiente de pago, el pedido podrá pasar automáticamente a estado Vencido, liberando la reserva de stock.
+Se prepara / entrega / envía o avisar al cliente para retirarlo.
+En el caso de qué el cliente tenga que retirarlo de manera presencial, se contacta mediante whatsapp para avisarle qué el pedido está preparado.
+Módulo 1. Catálogo de productos
+Funcionalidades cliente
+listado de productos
+búsqueda por nombre
+filtros por:
+categoría
+marca
+objetivo
+precio
+ordenamiento:
+menor precio
+mayor precio
+más vendidos
+promociones
+detalle de producto
+imágenes
+descripción
+precio actual
+precio promocional
+stock visible o no visible
+productos relacionados
+Funcionalidades admin
+alta de producto
+modificación
+baja lógica o física
+carga de imágenes
+categorías
+marcas
+precios
+costo interno opcional
+stock
+producto activo/inactivo
+producto destacado
+Módulo 2. Promociones
+Qué puede tener
+porcentaje de descuento
+monto fijo
+combo de productos
+2x1
+regalo por compra
+envío gratis a partir de cierto monto
+promoción por categoría
+promoción por marca
+promoción por fechas
+Admin
+crear promoción
+asignarla a productos o categorías
+activar/desactivar
+fecha de inicio y fin
+prioridad entre promociones
+Cliente
+listado de promociones
+badge “en promo”
+precio tachado + nuevo precio
+sección destacada de ofertas
+Módulo 3. Carrito
+Cliente
+agregar producto
+quitar producto
+modificar cantidad
+subtotal
+promociones aplicadas
+costo estimado de envío
+total estimado
+mensaje de observación
+Reglas
+validar stock antes de confirmar pedido
+evitar cantidades inválidas
+persistencia del carrito si el cliente inicia sesión
+Módulo 4. Pedido
+Este es el corazón del sistema.
+Datos del pedido
+número de pedido
+cliente
+fecha y hora
+detalle de productos
+subtotal
+descuentos
+costo envío
+total
+forma de entrega
+dirección
+observaciones
+estado
+comprobante de pago opcional
+Formas de entrega
+retiro en local
+envío a domicilio
+Formas de pago
+transferencia
+alias
+efectivo contra entrega
+link de pago opcional
+Módulo 5. WhatsApp de cierre de venta
+Tu idea principal entra acá.
+Qué debe hacer el sistema
+Cuando el cliente confirma:
+guarda la orden
+genera el pedido
+arma un mensaje automático
+redirige a WhatsApp
+Ejemplo de mensaje
+Hola, quiero confirmar este pedido:
+Pedido N°: 000123
+Nombre: Juan Pérez
+Teléfono: 11xxxxxxx
+Productos:
+- Proteína X 1kg x2
+- Creatina Y 300g x1
+Subtotal: $45.000
+Envío: $3.000
+Total: $48.000
+Forma de entrega: Envío a domicilio
+Dirección: xxxx
+Quedo atento/a para recibir el alias y realizar el pago.
+Módulo 6. Pagos y cobros
+Como no va a ser automático, necesitás un módulo manual bien pensado.
+Lógica recomendada
+Cliente
+recibe alias
+paga
+informa pago
+puede subir comprobante o enviarlo por WhatsApp
+Admin
+ve pedidos pendientes
+ve monto esperado
+marca:
+pendiente
+pago informado
+pago confirmado
+rechazado
+Módulo 7. Seguimiento de pedido
+¿Como lo hacen ellos ahora?
+Módulo 8. Usuario cliente
+Sí, también conviene.
+Funciones
+registro
+login
+recuperación de contraseña
+mis datos
+mis direcciones
+mis pedidos
+favoritos opcional
+historial de compras
+Beneficio real
+experiencia más profesional
+recompra más fácil
+mejor trazabilidad
+Módulo 9. Administración comercial
+El admin no debería solo poder ABM de productos/promos. También necesitás gestión operativa.
+El panel admin debería tener:
+Productos
+alta / baja / modificación
+stock
+precios
+imágenes
+Promociones
+alta / baja / modificación
+vigencia
+asignación a productos
+Pedidos
+ver listado
+filtrar por estado
+abrir detalle
+cambiar estado
+registrar pago
+ver historial del pedido
+Clientes
+listado de clientes
+datos de contacto
+historial de compras
+pedidos pendientes
+Stock
+entradas
+salidas
+ajustes manuales
+stock bajo
+Reportes
+ventas por período
+productos más vendidos
+pedidos cancelados
+pedidos pendientes de pago
+clientes frecuentes
