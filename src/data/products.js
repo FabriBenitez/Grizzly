@@ -54,7 +54,7 @@
   {
     id: "p3",
     slug: "creatina-star-nutrition-monohidrato-1kg-pote",
-    name: "25% OFF Creatina Star Nutrition Monohidrato 1kg Pote",
+    name: "Creatina Star Nutrition Monohidrato 1kg Pote",
     brand: "Star Nutrition",
     category: "Creatina",
     objective: "Fuerza",

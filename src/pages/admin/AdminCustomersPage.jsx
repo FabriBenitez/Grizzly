@@ -50,7 +50,7 @@ function aggregateCustomers(orders, users) {
 
     current.orderCount += 1;
     current.totalSpent += order.totals?.total || 0;
-    if (["Pendiente de pago", "Pago informado"].includes(order.status)) {
+    if (order.status === "Pendiente de pago") {
       current.pendingOrders += 1;
     }
     if (!current.lastOrder || new Date(order.createdAt) > new Date(current.lastOrder)) {

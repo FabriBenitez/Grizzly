@@ -1,16 +1,14 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Menu, Search, ShoppingBag, X } from "lucide-react";
 import { useCart } from "../../context/CartContext";
-import { useAuth } from "../../context/AuthContext";
 import { categories } from "../../data/products";
 
 const navigation = [
   { to: "/", label: "Inicio" },
   { to: "/promos", label: "Promos" },
   { to: "/catalogo", label: "Productos" },
-  { to: "/quienes-somos", label: "Quiénes somos" },
-  { to: "/seguimiento", label: "Seguí tu pedido" },
+  { to: "/quienes-somos", label: "Quienes somos" },
 ];
 
 function Header() {
@@ -18,7 +16,6 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showMega, setShowMega] = useState(false);
   const { summary } = useCart();
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const categoryColumns = useMemo(() => {
@@ -27,13 +24,19 @@ function Header() {
       categories.slice(0, perColumn),
       categories.slice(perColumn, perColumn * 2),
       categories.slice(perColumn * 2),
-    ].filter(Boolean);
+    ].filter((column) => column.length > 0);
   }, []);
 
   const handleSearch = (event) => {
     event.preventDefault();
     navigate(`/catalogo?q=${encodeURIComponent(query)}`);
     setMenuOpen(false);
+    setShowMega(false);
+  };
+
+  const closeMenus = () => {
+    setMenuOpen(false);
+    setShowMega(false);
   };
 
   return (
@@ -50,7 +53,7 @@ function Header() {
         <form className="search-form" onSubmit={handleSearch}>
           <input
             type="search"
-            placeholder="¿Qué estás buscando?"
+            placeholder="Que estas buscando?"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -60,18 +63,23 @@ function Header() {
         </form>
 
         <div className="header-actions">
-          <Link to="/cuenta" className="account-link">
-            <User size={18} />
+          <Link to="/admin" className="account-link" aria-label="Abrir panel de admin">
             <span>
-              {currentUser ? `Hola, ${currentUser.name.split(" ")[0]}` : "¡Hola! Iniciá sesión"}
-              <small>{currentUser ? "Ver mi cuenta" : "O podés registrarte"}</small>
+              Admin
             </span>
           </Link>
+
           <Link to="/checkout" className="cart-link" aria-label="Ver carrito">
             <ShoppingBag size={22} />
             {summary.count > 0 && <b>{summary.count}</b>}
           </Link>
-          <button className="menu-toggle" onClick={() => setMenuOpen((prev) => !prev)}>
+
+          <button
+            type="button"
+            className="menu-toggle"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
+          >
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -79,48 +87,53 @@ function Header() {
 
       <div className={`header-nav-wrap ${menuOpen ? "open" : ""}`}>
         <nav className="header-nav container">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <NavLink to="/admin" onClick={() => setMenuOpen(false)}>
-            Admin
-          </NavLink>
-        </nav>
-      </div>
+          {navigation.map((item) =>
+            item.to === "/catalogo" ? (
+              <div
+                key={item.to}
+                className="nav-item-with-mega"
+                onMouseEnter={() => setShowMega(true)}
+                onMouseLeave={() => setShowMega(false)}
+              >
+                <NavLink
+                  to={item.to}
+                  end={item.to === "/"}
+                  onClick={closeMenus}
+                >
+                  {item.label}
+                </NavLink>
 
-      <div
-        className="mega-trigger container"
-        onMouseEnter={() => setShowMega(true)}
-        onMouseLeave={() => setShowMega(false)}
-      >
-        <button type="button" className="mega-button">
-          Categorías de productos
-        </button>
-        {showMega && (
-          <div className="mega-menu">
-            {categoryColumns.map((column, index) => (
-              <ul key={`col-${index}`}>
-                {column.map((category) => (
-                  <li key={category}>
-                    <Link
-                      to={`/catalogo?categoria=${encodeURIComponent(category)}`}
-                      onClick={() => setShowMega(false)}
-                    >
-                      {category}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ))}
-          </div>
-        )}
+                {showMega && (
+                  <div className="mega-menu">
+                    {categoryColumns.map((column, index) => (
+                      <ul key={`col-${index}`}>
+                        {column.map((category) => (
+                          <li key={category}>
+                            <Link
+                              to={`/catalogo?categoria=${encodeURIComponent(category)}`}
+                              onClick={closeMenus}
+                            >
+                              {category}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                onClick={closeMenus}
+              >
+                {item.label}
+              </NavLink>
+            ),
+          )}
+        </nav>
       </div>
     </header>
   );

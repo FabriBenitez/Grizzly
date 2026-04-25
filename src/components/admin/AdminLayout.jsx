@@ -9,8 +9,10 @@ const adminNav = [
   { to: "/admin/pagos", label: "Pagos" },
   { to: "/admin/productos", label: "Productos" },
   { to: "/admin/promociones", label: "Promociones" },
+  { to: "/admin/hero", label: "Hero" },
   { to: "/admin/clientes", label: "Clientes" },
   { to: "/admin/stock", label: "Stock" },
+  { to: "/admin/caja", label: "Caja" },
   { to: "/admin/reportes", label: "Reportes" },
 ];
 

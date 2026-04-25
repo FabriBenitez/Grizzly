@@ -2,14 +2,6 @@ export function getEffectivePrice(product) {
   return product.promoPrice || product.price;
 }
 
-export function getDiscountPercent(product) {
-  if (!product.promoPrice || product.promoPrice >= product.price) {
-    return 0;
-  }
-
-  return Math.round(((product.price - product.promoPrice) / product.price) * 100);
-}
-
 export function filterProducts(products, filters) {
   const {
     query = "",

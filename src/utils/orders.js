@@ -1,18 +1,74 @@
 import { ORDER_STATUSES } from "../data/constants";
 
 const ORDER_STORAGE_KEY = "grizzly_orders";
+const LEGACY_STATUS_MAP = {
+  "Pendiente de confirmacion": "Pendiente de pago",
+  "Pendiente de confirmación": "Pendiente de pago",
+  "Pago informado": "Pendiente de pago",
+  "En preparación": "En preparacion",
+  "Despachado / enviado": "Despachado",
+};
+
+export function normalizeOrderStatus(status) {
+  const normalized = LEGACY_STATUS_MAP[status] || status;
+  return ORDER_STATUSES.includes(normalized) ? normalized : ORDER_STATUSES[0];
+}
+
+function normalizeStatusHistory(history = [], fallbackStatus) {
+  const normalizedEntries = (history || [])
+    .map((entry) => ({
+      ...entry,
+      status: normalizeOrderStatus(entry.status),
+    }))
+    .filter((entry, index, array) => index === 0 || entry.status !== array[index - 1].status);
+
+  if (!normalizedEntries.length) {
+    return [
+      {
+        status: normalizeOrderStatus(fallbackStatus),
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  }
+
+  return normalizedEntries;
+}
+
+export function normalizeOrderRecord(order) {
+  const normalizedStatus = normalizeOrderStatus(order.status);
+  const normalizedHistory = normalizeStatusHistory(order.statusHistory, normalizedStatus);
+  const latestHistoryStatus = normalizedHistory[normalizedHistory.length - 1]?.status;
+
+  return {
+    ...order,
+    status: latestHistoryStatus || normalizedStatus,
+    statusHistory:
+      latestHistoryStatus === normalizedStatus
+        ? normalizedHistory
+        : [
+            ...normalizedHistory,
+            {
+              status: normalizedStatus,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+  };
+}
 
 function readStorage() {
   try {
     const raw = window.localStorage.getItem(ORDER_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw).map(normalizeOrderRecord) : [];
   } catch {
     return [];
   }
 }
 
 function writeStorage(orders) {
-  window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orders));
+  window.localStorage.setItem(
+    ORDER_STORAGE_KEY,
+    JSON.stringify(orders.map((order) => normalizeOrderRecord(order))),
+  );
 }
 
 function nextOrderNumber(currentOrders) {
@@ -79,12 +135,14 @@ export function updateOrderStatus(orderNumber, nextStatus) {
 export function findOrderByNumberAndPhone(orderNumber, phone) {
   const normalizedPhone = phone.replace(/\D/g, "");
 
-  return readStorage().find((order) => {
+  const found = readStorage().find((order) => {
     const matchesOrder = order.number === orderNumber;
     const orderPhone = String(order.customer?.phone || "").replace(/\D/g, "");
     const matchesPhone = !normalizedPhone || orderPhone.endsWith(normalizedPhone);
     return matchesOrder && matchesPhone;
   });
+
+  return found ? normalizeOrderRecord(found) : null;
 }
 
 export function getOrdersByPhone(phone) {

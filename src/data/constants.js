@@ -1,10 +1,8 @@
 export const ORDER_STATUSES = [
-  "Pendiente de confirmación",
   "Pendiente de pago",
-  "Pago informado",
   "Pago confirmado",
-  "En preparación",
-  "Despachado / enviado",
+  "En preparacion",
+  "Despachado",
   "Entregado",
   "Cancelado",
   "Vencido",
@@ -12,7 +10,7 @@ export const ORDER_STATUSES = [
 
 export const DELIVERY_METHODS = [
   { id: "retiro", label: "Retiro presencial" },
-  { id: "envio", label: "Envío a domicilio" },
+  { id: "envio", label: "Envio a domicilio" },
 ];
 
 export const PAYMENT_METHODS = [

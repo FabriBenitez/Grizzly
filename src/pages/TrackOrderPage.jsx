@@ -25,10 +25,13 @@ function TrackOrderPage() {
       return [];
     }
 
-    const currentIndex = ORDER_STATUSES.indexOf(order.status);
-    return ORDER_STATUSES.map((status, index) => ({
+    const reachedStatuses = new Set(
+      (order.statusHistory || []).map((entry) => entry.status).concat(order.status),
+    );
+
+    return ORDER_STATUSES.map((status) => ({
       status,
-      reached: index <= currentIndex,
+      reached: reachedStatuses.has(status),
       current: status === order.status,
     }));
   }, [order]);
@@ -36,7 +39,7 @@ function TrackOrderPage() {
   const runSearch = (rawOrder, rawPhone) => {
     const normalizedOrder = normalizeOrderInput(rawOrder);
     if (!normalizedOrder) {
-      setError("Ingresá un número de pedido.");
+      setError("Ingresa un numero de pedido.");
       setOrder(null);
       return;
     }
@@ -66,13 +69,9 @@ function TrackOrderPage() {
 
   const canCancel =
     order &&
-    ![
-      "Pago confirmado",
-      "En preparación",
-      "Despachado / enviado",
-      "Entregado",
-      "Cancelado",
-    ].includes(order.status);
+    !["Pago confirmado", "En preparacion", "Despachado", "Entregado", "Cancelado", "Vencido"].includes(
+      order.status,
+    );
 
   const cancelOrder = () => {
     if (!order) {
@@ -89,13 +88,13 @@ function TrackOrderPage() {
     <div className="container section-space track-page">
       <header className="section-title">
         <p>Seguimiento</p>
-        <h1>Seguí tu pedido</h1>
-        <span>Consultá estado de pago, preparación y envío con número de pedido.</span>
+        <h1>Segui tu pedido</h1>
+        <span>Consulta estado de pago, preparacion y entrega con numero de pedido.</span>
       </header>
 
       <form className="track-form" onSubmit={handleSearch}>
         <label>
-          Número de pedido
+          Numero de pedido
           <input
             type="text"
             value={orderNumber}
@@ -104,7 +103,7 @@ function TrackOrderPage() {
           />
         </label>
         <label>
-          Teléfono
+          Telefono
           <input
             type="tel"
             value={phone}
@@ -138,7 +137,7 @@ function TrackOrderPage() {
             </article>
             <article>
               <h3>Entrega</h3>
-              <p>{order.delivery.type === "envio" ? "Envío a domicilio" : "Retiro presencial"}</p>
+              <p>{order.delivery.type === "envio" ? "Envio a domicilio" : "Retiro presencial"}</p>
               {order.delivery.type === "envio" ? (
                 <>
                   <p>{order.delivery.address}</p>
@@ -155,9 +154,9 @@ function TrackOrderPage() {
             </article>
             <article>
               <h3>Pago</h3>
-              <p>Método: {order.paymentMethod}</p>
+              <p>Metodo: {order.paymentMethod}</p>
               <p>Total: {formatCurrency(order.totals.total)}</p>
-              <p>Envío: {formatCurrency(order.totals.shipping)}</p>
+              <p>Envio: {formatCurrency(order.totals.shipping)}</p>
             </article>
           </div>
 

@@ -142,7 +142,7 @@ export const demoOrders = [
     items: [
       {
         id: "p3",
-        name: "25% OFF Creatina Star Nutrition Monohidrato 1kg Pote",
+        name: "Creatina Star Nutrition Monohidrato 1kg Pote",
         quantity: 1,
         unitPrice: 85561,
         subtotal: 85561,

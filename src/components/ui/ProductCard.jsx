@@ -2,11 +2,10 @@ import { Link } from "react-router-dom";
 import { ShoppingBag, Star } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { formatCurrency } from "../../utils/currency";
-import { getDiscountPercent, getEffectivePrice } from "../../utils/catalog";
+import { getEffectivePrice } from "../../utils/catalog";
 
 function ProductCard({ product, compact = false }) {
   const { addToCart } = useCart();
-  const discount = getDiscountPercent(product);
   const effectivePrice = getEffectivePrice(product);
 
   return (
@@ -24,7 +23,7 @@ function ProductCard({ product, compact = false }) {
           <span>{product.rating}</span>
           <small>({product.reviews})</small>
         </div>
-        {discount > 0 && <small className="discount-label">-{discount}% OFF</small>}
+        {product.promo && <small className="discount-label">Promo activa</small>}
         <div className="product-pricing">
           {product.promoPrice && <small>{formatCurrency(product.price)}</small>}
           <strong>{formatCurrency(effectivePrice)}</strong>

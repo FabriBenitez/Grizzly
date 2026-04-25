@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
 import AdminLayout from "./components/admin/AdminLayout";
@@ -14,9 +15,12 @@ import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import AdminPromotionsPage from "./pages/admin/AdminPromotionsPage";
+import AdminHeroPage from "./pages/admin/AdminHeroPage";
 import AdminCustomersPage from "./pages/admin/AdminCustomersPage";
 import AdminStockPage from "./pages/admin/AdminStockPage";
-import AdminReportsPage from "./pages/admin/AdminReportsPage";
+import AdminCashPage from "./pages/admin/AdminCashPage";
+
+const AdminReportsPage = lazy(() => import("./pages/admin/AdminReportsPage"));
 
 function App() {
   return (
@@ -27,9 +31,24 @@ function App() {
         <Route path="pagos" element={<AdminPaymentsPage />} />
         <Route path="productos" element={<AdminProductsPage />} />
         <Route path="promociones" element={<AdminPromotionsPage />} />
+        <Route path="hero" element={<AdminHeroPage />} />
         <Route path="clientes" element={<AdminCustomersPage />} />
         <Route path="stock" element={<AdminStockPage />} />
-        <Route path="reportes" element={<AdminReportsPage />} />
+        <Route path="caja" element={<AdminCashPage />} />
+        <Route
+          path="reportes"
+          element={
+            <Suspense
+              fallback={
+                <div className="admin-page-root">
+                  <section className="admin-demo-note">Cargando reportes...</section>
+                </div>
+              }
+            >
+              <AdminReportsPage />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
 

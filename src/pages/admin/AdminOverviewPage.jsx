@@ -5,7 +5,6 @@ import { products } from "../../data/products";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
 import { getOrders } from "../../utils/orders";
 import {
-  ADMIN_FUNCTIONALITIES,
   ADMIN_WORKFLOW_STEPS,
   getAdminMetrics,
   getOrdersSource,
@@ -31,8 +30,8 @@ function AdminOverviewPage() {
         <p>Dashboard</p>
         <h1>Control operativo integral</h1>
         <span>
-          Esta vista resume todo lo que debe cumplir el administrador: catalogo, pedidos, pagos,
-          stock, clientes y reportes.
+          Vista general para seguir cobros, preparacion, despachos, entregas, ventas y alertas de
+          stock desde un solo panel.
         </span>
       </header>
 
@@ -48,20 +47,20 @@ function AdminOverviewPage() {
           <strong>{metrics.totalOrders}</strong>
         </article>
         <article>
-          <p>Pendiente confirmacion</p>
-          <strong>{metrics.pendingConfirmation}</strong>
-        </article>
-        <article>
-          <p>Pendiente pago</p>
+          <p>Pendiente de pago</p>
           <strong>{metrics.pendingPayment}</strong>
         </article>
         <article>
-          <p>Pago informado</p>
-          <strong>{metrics.paymentReported}</strong>
+          <p>Pago confirmado</p>
+          <strong>{metrics.confirmedPayment}</strong>
         </article>
         <article>
           <p>En preparacion</p>
           <strong>{metrics.inPreparation}</strong>
+        </article>
+        <article>
+          <p>Despachados</p>
+          <strong>{metrics.dispatched}</strong>
         </article>
         <article>
           <p>Entregados</p>
@@ -79,7 +78,7 @@ function AdminOverviewPage() {
 
       <section className="admin-card">
         <div className="admin-card-title">
-          <h2>Flujo completo que debe gestionar el admin</h2>
+          <h2>Flujo operativo de pedidos</h2>
           <Link to="/admin/pedidos">Ir a gestion de pedidos</Link>
         </div>
         <ol className="workflow-grid">
@@ -91,25 +90,6 @@ function AdminOverviewPage() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="admin-card">
-        <div className="admin-card-title">
-          <h2>Funcionalidades obligatorias por modulo</h2>
-          <Link to="/admin/reportes">Ver reportes</Link>
-        </div>
-        <div className="module-grid">
-          {ADMIN_FUNCTIONALITIES.map((module) => (
-            <article key={module.area}>
-              <h3>{module.area}</h3>
-              <ul>
-                {module.points.map((point) => (
-                  <li key={`${module.area}-${point}`}>{point}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="admin-two-col">

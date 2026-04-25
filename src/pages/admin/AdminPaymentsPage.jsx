@@ -40,7 +40,8 @@ function AdminPaymentsPage() {
         <p>Pagos</p>
         <h1>Control manual de cobros</h1>
         <span>
-          Gestion del circuito pendiente de pago, pago informado, pago confirmado o rechazo.
+          Gestion del circuito de cobro para confirmar pagos, liberar reservas vencidas o derivar
+          pedidos a preparacion.
         </span>
       </header>
 
@@ -63,16 +64,16 @@ function AdminPaymentsPage() {
             <b>Banco:</b> Banco Nacion
           </p>
           <p>
-            <b>Regla:</b> Si no hay pago informado en 24h, el pedido puede pasar a Vencido.
+            <b>Regla:</b> Si no se acredita el pago en 24h, el pedido puede pasar a Vencido.
           </p>
         </article>
         <article>
           <h3>Estados comerciales de pago</h3>
           <ul>
-            <li>Pendiente de pago: reserva de stock.</li>
-            <li>Pago informado: cliente envio comprobante.</li>
-            <li>Pago confirmado: se descuenta stock definitivo.</li>
-            <li>Cancelado / vencido: se libera reserva.</li>
+            <li>Pendiente de pago: reserva de stock y espera de acreditacion.</li>
+            <li>Pago confirmado: cobro validado y pedido listo para preparacion.</li>
+            <li>Vencido: se libera la reserva por falta de pago.</li>
+            <li>Cancelado: anulacion manual del pedido por decision comercial.</li>
           </ul>
         </article>
       </section>
@@ -125,21 +126,27 @@ function AdminPaymentsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => changeStatus(order.number, "Pago informado")}
-                        >
-                          Informado
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => changeStatus(order.number, "Pago confirmado")}
                         >
                           Confirmar
                         </button>
                         <button
                           type="button"
+                          onClick={() => changeStatus(order.number, "En preparacion")}
+                        >
+                          Preparar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeStatus(order.number, "Vencido")}
+                        >
+                          Vencer
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => changeStatus(order.number, "Cancelado")}
                         >
-                          Rechazar
+                          Cancelar
                         </button>
                       </div>
                     </td>

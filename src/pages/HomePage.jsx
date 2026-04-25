@@ -1,13 +1,29 @@
-﻿import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import ProductCard from "../components/ui/ProductCard";
 import SectionTitle from "../components/ui/SectionTitle";
 import { products } from "../data/products";
+import { getActiveHeroSlides } from "../utils/heroSlides";
 
 function HomePage() {
+  const [activePromo, setActivePromo] = useState(0);
+  const [heroSlides] = useState(() => getActiveHeroSlides());
   const promos = products.filter((product) => product.promo).slice(0, 6);
   const combos = products.filter((product) => product.combo).slice(0, 6);
   const bestSellers = [...products].sort((a, b) => b.sold - a.sold).slice(0, 6);
-  const heroProducts = products.filter((product) => ["p1", "p4", "p12"].includes(product.id));
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActivePromo((current) => (current + 1) % heroSlides.length);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroSlides]);
 
   const categoryCards = [
     "Combos",
@@ -22,43 +38,88 @@ function HomePage() {
     "Alimentos fit y Pancakes",
   ];
 
+  const currentSlide = heroSlides[activePromo] || heroSlides[0];
+
+  const showPrevPromo = () => {
+    setActivePromo((current) => (current - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const showNextPromo = () => {
+    setActivePromo((current) => (current + 1) % heroSlides.length);
+  };
+
   return (
     <div className="home-page">
-      <section className="hero-banner hero-solid">
-        <div className="container hero-solid-grid">
-          <div className="hero-copy">
-            <p className="hero-kicker">Grizzly suplementos</p>
-            <h1>Ofertas y productos para potenciar tu entrenamiento</h1>
-            <p className="hero-subtitle">
-              Compra por catalogo, agrega al carrito y finaliza pedido en WhatsApp en segundos.
-            </p>
-            <div className="hero-tags">
-              <span>Ofertas activas</span>
-              <span>Productos destacados</span>
-              <span>Combos con descuento</span>
-            </div>
-            <div className="hero-actions">
-              <Link to="/promos" className="btn-primary">
-                Ver ofertas
-              </Link>
-              <Link to="/catalogo" className="btn-outline">
-                Ver productos
-              </Link>
-            </div>
-          </div>
+      <section className="hero-carousel-section" aria-label="Carrusel principal de promociones">
+        <article
+          className="hero-carousel-slide"
+          style={{ "--hero-image": `url("${currentSlide.image}")` }}
+        >
+          <button
+            type="button"
+            className="hero-carousel-arrow left"
+            onClick={showPrevPromo}
+            aria-label="Slide anterior"
+          >
+            <ChevronLeft size={24} />
+          </button>
 
-          <div className="hero-product-stack">
-            {heroProducts.map((product) => (
-              <article key={product.id}>
-                <img src={product.image} alt={product.name} />
-                <div>
-                  <small>{product.category}</small>
-                  <strong>{product.name}</strong>
-                </div>
-              </article>
-            ))}
+          <button
+            type="button"
+            className="hero-carousel-arrow right"
+            onClick={showNextPromo}
+            aria-label="Slide siguiente"
+          >
+            <ChevronRight size={24} />
+          </button>
+
+          <div className="container hero-carousel-content">
+            <div className="hero-carousel-copy">
+              <p className="hero-carousel-kicker">{currentSlide.kicker}</p>
+              <h1>
+                <span>{currentSlide.titleLead}</span>
+                <strong>{currentSlide.titleHighlight}</strong>
+                <em>{currentSlide.titleTail}</em>
+              </h1>
+              <p className="hero-carousel-description">{currentSlide.description}</p>
+
+              <div className="hero-carousel-badges">
+                {currentSlide.badges.map((badge) => (
+                  <span key={badge}>{badge}</span>
+                ))}
+              </div>
+
+              <div className="hero-actions">
+                <Link to="/catalogo" className="btn-primary">
+                  Ver productos
+                </Link>
+                <Link to="/promos" className="btn-outline hero-outline-light">
+                  Ver promos
+                </Link>
+              </div>
+            </div>
+
+            <div className="hero-carousel-bottom">
+              <div className="hero-carousel-stats">
+                {currentSlide.stats.map((stat) => (
+                  <span key={stat}>{stat}</span>
+                ))}
+              </div>
+
+              <div className="hero-carousel-dots" aria-label="Seleccionar slide">
+                {heroSlides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    className={`hero-carousel-dot ${index === activePromo ? "active" : ""}`}
+                    onClick={() => setActivePromo(index)}
+                    aria-label={`Ver slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </article>
       </section>
 
       <section className="container section-space">
@@ -96,7 +157,7 @@ function HomePage() {
         <div className="container section-space">
           <SectionTitle
             eyebrow="Aprovecha packs"
-            title="Combos con Descuento"
+            title="Combos destacados"
             subtitle="Kits armados para fuerza, energia y recuperacion."
             light
           />

@@ -4,7 +4,7 @@ import { Truck } from "lucide-react";
 import { products } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/currency";
-import { getDiscountPercent, getEffectivePrice } from "../utils/catalog";
+import { getEffectivePrice } from "../utils/catalog";
 import ProductCard from "../components/ui/ProductCard";
 
 function ProductPage() {
@@ -40,7 +40,6 @@ function ProductPage() {
   }
 
   const effectivePrice = getEffectivePrice(product);
-  const discount = getDiscountPercent(product);
   const viewerCount = 200 + (product.reviews * 7) % 800;
 
   const handleQuantity = (delta) => {
@@ -101,7 +100,7 @@ function ProductPage() {
         <div className="product-info">
           <h1>{product.name}</h1>
           <p className="product-short">{product.description}</p>
-          <small className="discount-label">-{discount}% OFF</small>
+          {product.promo && <small className="discount-label">Promo activa</small>}
           <div className="detail-pricing">
             <strong>{formatCurrency(effectivePrice)}</strong>
             <small>{formatCurrency(product.price)}</small>
