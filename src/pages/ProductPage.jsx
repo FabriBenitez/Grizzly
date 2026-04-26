@@ -1,6 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Truck } from "lucide-react";
+import {
+  BadgeCheck,
+  Flame,
+  PackageCheck,
+  ShieldCheck,
+  Truck,
+} from "lucide-react";
 import { products } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/currency";
@@ -17,6 +23,14 @@ function ProductPage() {
   const [shippingMessage, setShippingMessage] = useState("");
   const [added, setAdded] = useState(false);
 
+  useEffect(() => {
+    setMainImage(product?.gallery?.[0] || "");
+    setQuantity(1);
+    setPostalCode("");
+    setShippingMessage("");
+    setAdded(false);
+  }, [product]);
+
   const relatedProducts = useMemo(() => {
     if (!product) {
       return [];
@@ -31,9 +45,9 @@ function ProductPage() {
     return (
       <section className="container section-space empty-box">
         <h2>Producto no encontrado</h2>
-        <p>Revisá el catálogo para encontrar el suplemento que estás buscando.</p>
+        <p>Revisa el catalogo para encontrar el suplemento que estas buscando.</p>
         <Link to="/catalogo" className="btn-primary">
-          Ir al catálogo
+          Ir al catalogo
         </Link>
       </section>
     );
@@ -41,6 +55,10 @@ function ProductPage() {
 
   const effectivePrice = getEffectivePrice(product);
   const viewerCount = 200 + (product.reviews * 7) % 800;
+  const galleryCount = product.gallery?.length || 0;
+  const stockLabel =
+    product.stock > 20 ? "Stock disponible" : product.stock > 8 ? "Ultimas unidades" : "Stock bajo";
+  const stockTone = product.stock > 20 ? "ok" : product.stock > 8 ? "warn" : "alert";
 
   const handleQuantity = (delta) => {
     setQuantity((current) => Math.min(product.stock, Math.max(1, current + delta)));
@@ -49,18 +67,18 @@ function ProductPage() {
   const handleAddToCart = () => {
     addToCart(product, quantity);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+    window.setTimeout(() => setAdded(false), 1800);
   };
 
   const calculateShipping = () => {
     if (!postalCode.trim()) {
-      setShippingMessage("Ingresá un código postal válido.");
+      setShippingMessage("Ingresa un codigo postal valido.");
       return;
     }
 
     const numericPostal = Number(postalCode.replace(/\D/g, ""));
     if (!numericPostal) {
-      setShippingMessage("Ingresá un código postal válido.");
+      setShippingMessage("Ingresa un codigo postal valido.");
       return;
     }
 
@@ -72,86 +90,152 @@ function ProductPage() {
     <div className="product-page container section-space">
       <div className="breadcrumb">
         <Link to="/">Inicio</Link>
-        <span>•</span>
+        <span>/</span>
         <Link to="/promos">Promos</Link>
-        <span>•</span>
+        <span>/</span>
         <span>{product.name}</span>
       </div>
 
       <div className="product-detail">
-        <div className="product-gallery">
-          <div className="thumb-list">
-            {product.gallery.map((image) => (
-              <button
-                key={image}
-                type="button"
-                onClick={() => setMainImage(image)}
-                className={mainImage === image ? "active" : ""}
-              >
-                <img src={image} alt={`${product.name} miniatura`} />
-              </button>
-            ))}
+        <div className="product-gallery-shell">
+          <div className="product-gallery">
+            <div className="thumb-list">
+              {product.gallery.map((image, index) => (
+                <button
+                  key={image}
+                  type="button"
+                  onClick={() => setMainImage(image)}
+                  className={mainImage === image ? "active" : ""}
+                  aria-label={`Ver imagen ${index + 1} de ${product.name}`}
+                >
+                  <img src={image} alt={`${product.name} miniatura`} />
+                </button>
+              ))}
+            </div>
+
+            <div className="main-image">
+              {product.promo && <span className="product-hero-tag">Promo activa</span>}
+              <img src={mainImage} alt={product.name} />
+            </div>
           </div>
-          <div className="main-image">
-            <img src={mainImage} alt={product.name} />
+
+          <div className="product-gallery-footer">
+            <div>
+              <strong>{galleryCount} imagenes del producto</strong>
+              <span>Navega la galeria para revisar detalle, pack y variantes visuales.</span>
+            </div>
+            <div className="product-gallery-bullets">
+              <span>
+                <ShieldCheck size={15} />
+                Producto original
+              </span>
+              <span>
+                <Truck size={15} />
+                Envio a todo el pais
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="product-info">
-          <h1>{product.name}</h1>
-          <p className="product-short">{product.description}</p>
-          {product.promo && <small className="discount-label">Promo activa</small>}
-          <div className="detail-pricing">
-            <strong>{formatCurrency(effectivePrice)}</strong>
-            <small>{formatCurrency(product.price)}</small>
-            <span>{formatCurrency(product.transferPrice)} con transferencia</span>
-            <p>3 x {formatCurrency(Math.round(effectivePrice / 3))} sin interés</p>
-            <p className="delivery-note">Envío gratis superando los $120.000</p>
-          </div>
-
-          <div className="quantity-row">
-            <button type="button" onClick={() => handleQuantity(-1)}>
-              -
-            </button>
-            <span>{quantity}</span>
-            <button type="button" onClick={() => handleQuantity(1)}>
-              +
-            </button>
-          </div>
-
-          <button type="button" className="btn-primary full" onClick={handleAddToCart}>
-            AGREGAR AL CARRITO
-          </button>
-          {added && <p className="feedback-ok">Producto agregado al carrito.</p>}
-
-          <div className="shipping-calculator">
-            <label>
-              <Truck size={16} />
-              Medios de envío
-            </label>
-            <div>
-              <input
-                type="text"
-                placeholder="Tu código postal"
-                value={postalCode}
-                onChange={(event) => setPostalCode(event.target.value)}
-              />
-              <button type="button" onClick={calculateShipping}>
-                CALCULAR
-              </button>
+        <div className="product-info-column">
+          <div className="product-info-header">
+            <div className="product-info-chips">
+              <span>{product.brand}</span>
+              <span>{product.category}</span>
+              <span className={`stock-state ${stockTone}`}>{stockLabel}</span>
             </div>
-            {shippingMessage && <p>{shippingMessage}</p>}
+
+            <h1>{product.name}</h1>
+
+            <div className="product-rating-row">
+              <div className="product-rating large">
+                <BadgeCheck size={16} />
+                <span>{product.rating} de 5</span>
+                <small>({product.reviews} opiniones)</small>
+              </div>
+              <p className="product-short">{product.description}</p>
+            </div>
           </div>
 
-          <p className="viewers">🔥 {viewerCount} personas vieron este producto recientemente.</p>
+          <div className="product-purchase-card">
+            <div className="detail-pricing">
+              {product.promo && <small className="discount-label">Promo activa</small>}
+              <div className="detail-price-main">
+                <strong>{formatCurrency(effectivePrice)}</strong>
+                {product.promoPrice && <small>{formatCurrency(product.price)}</small>}
+              </div>
+              <span>{formatCurrency(product.transferPrice)} con transferencia</span>
+              <p className="delivery-note">
+                <Truck size={16} />
+                Envio gratis superando los $120.000
+              </p>
+            </div>
+
+            <div className="quantity-block">
+              <label>Cantidad</label>
+              <div className="quantity-row">
+                <button type="button" onClick={() => handleQuantity(-1)}>
+                  -
+                </button>
+                <span>{quantity}</span>
+                <button type="button" onClick={() => handleQuantity(1)}>
+                  +
+                </button>
+              </div>
+            </div>
+
+            <button type="button" className="btn-primary full product-cta" onClick={handleAddToCart}>
+              AGREGAR AL CARRITO
+            </button>
+            {added && <p className="feedback-ok">Producto agregado al carrito.</p>}
+
+            <div className="shipping-calculator">
+              <label>
+                <Truck size={16} />
+                Calcula tu envio
+              </label>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Tu codigo postal"
+                  value={postalCode}
+                  onChange={(event) => setPostalCode(event.target.value)}
+                />
+                <button type="button" onClick={calculateShipping}>
+                  CALCULAR
+                </button>
+              </div>
+              {shippingMessage && <p>{shippingMessage}</p>}
+            </div>
+
+            <div className="product-trust-strip">
+              <span>
+                <PackageCheck size={16} />
+                Compra segura
+              </span>
+              <span>
+                <ShieldCheck size={16} />
+                Producto original
+              </span>
+            </div>
+
+            <p className="viewers">
+              <Flame size={16} />
+              {viewerCount} personas vieron este producto recientemente.
+            </p>
+          </div>
         </div>
       </div>
 
       <section className="section-space">
-        <h2 className="related-title">Productos relacionados</h2>
+        <div className="section-title">
+          <p>Complementa tu compra</p>
+          <h2 className="related-title">Productos relacionados</h2>
+          <span>Mas opciones dentro de la misma categoria para comparar o sumar al pedido.</span>
+        </div>
         <div className="product-grid four-col">
-          {relatedProducts.map((item) => (
-            <ProductCard key={item.id} product={item} compact />
+          {relatedProducts.map((item, index) => (
+            <ProductCard key={item.id} product={item} compact revealIndex={index} />
           ))}
         </div>
       </section>

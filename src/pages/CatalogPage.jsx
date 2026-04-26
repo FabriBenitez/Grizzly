@@ -5,6 +5,23 @@ import SectionTitle from "../components/ui/SectionTitle";
 import { brands, categories, products } from "../data/products";
 import { filterProducts, sortProducts } from "../utils/catalog";
 
+function ProductCardSkeleton() {
+  return (
+    <article className="product-card compact skeleton-product-card" aria-hidden="true">
+      <div className="product-image-wrap skeleton-shimmer">
+        <span className="product-tag">Cargando</span>
+      </div>
+      <div className="product-body">
+        <div className="skeleton-line skeleton-title skeleton-shimmer" />
+        <div className="skeleton-line skeleton-rating skeleton-shimmer" />
+        <div className="skeleton-line skeleton-promo skeleton-shimmer" />
+        <div className="skeleton-line skeleton-price skeleton-shimmer" />
+        <div className="skeleton-line skeleton-transfer skeleton-shimmer" />
+      </div>
+    </article>
+  );
+}
+
 function CatalogPage({ onlyPromos = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => ({
@@ -16,6 +33,8 @@ function CatalogPage({ onlyPromos = false }) {
     promoOnly: onlyPromos || searchParams.get("promo") === "1",
   }));
   const [sortBy, setSortBy] = useState("mostSold");
+  const [isLoading, setIsLoading] = useState(true);
+  const skeletonProducts = useMemo(() => Array.from({ length: 10 }, (_, index) => index), []);
 
   useEffect(() => {
     setFilters((prev) => ({
@@ -25,6 +44,15 @@ function CatalogPage({ onlyPromos = false }) {
       promoOnly: onlyPromos || searchParams.get("promo") === "1",
     }));
   }, [onlyPromos, searchParams]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timeoutId = window.setTimeout(() => {
+      setIsLoading(false);
+    }, 360);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filters, sortBy]);
 
   const visibleProducts = useMemo(() => {
     const filtered = filterProducts(products, filters);
@@ -156,16 +184,27 @@ function CatalogPage({ onlyPromos = false }) {
             </button>
           </aside>
 
-          <div>
-            {visibleProducts.length === 0 ? (
+          <div className="catalog-results" aria-busy={isLoading}>
+            {isLoading ? (
+              <div className="product-grid five-col">
+                {skeletonProducts.map((index) => (
+                  <ProductCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : visibleProducts.length === 0 ? (
               <div className="empty-box">
                 <h3>No encontramos productos con esos filtros</h3>
                 <p>Proba quitando filtros o buscando por otra palabra.</p>
               </div>
             ) : (
               <div className="product-grid five-col">
-                {visibleProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} compact />
+                {visibleProducts.map((product, index) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    compact
+                    revealIndex={index}
+                  />
                 ))}
               </div>
             )}

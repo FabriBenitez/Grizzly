@@ -11,6 +11,13 @@ const navigation = [
   { to: "/quienes-somos", label: "Quienes somos" },
 ];
 
+const promoMessages = [
+  "Envio gratis minimo $120.000 en tu compra",
+  "Envios a todo el pais",
+  "Envio gratis minimo $120.000 en tu compra",
+  "Envios a todo el pais",
+];
+
 function Header() {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,6 +48,18 @@ function Header() {
 
   return (
     <header className="site-header">
+      <div className="promo-strip" aria-label="Promociones destacadas">
+        <div className="promo-strip-track">
+          {[0, 1].map((group) => (
+            <div key={group} className="promo-strip-group" aria-hidden={group === 1}>
+              {promoMessages.map((message, index) => (
+                <span key={`${group}-${index}`}>{message}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="header-top container">
         <Link to="/" className="brand-logo">
           <img src="/assets/logo-grizzly.jpg" alt="Logo Grizzly Suplementos" />

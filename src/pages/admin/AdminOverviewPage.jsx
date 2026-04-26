@@ -1,5 +1,18 @@
 import { useMemo } from "react";
+import {
+  AlertTriangle,
+  BadgeDollarSign,
+  CheckCircle2,
+  ClipboardList,
+  Package,
+  PackageCheck,
+  PackageX,
+  TimerReset,
+  Truck,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import AdminEmptyState from "../../components/admin/AdminEmptyState";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 import OrderStatusBadge from "../../components/ui/OrderStatusBadge";
 import { products } from "../../data/products";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
@@ -10,6 +23,61 @@ import {
   getOrdersSource,
   getTopProductsFromOrders,
 } from "../../utils/admin";
+
+const dashboardMetricConfig = [
+  {
+    key: "totalOrders",
+    title: "Pedidos totales",
+    icon: ClipboardList,
+    helper: "Base operativa del periodo actual.",
+  },
+  {
+    key: "pendingPayment",
+    title: "Pendiente de pago",
+    icon: TimerReset,
+    helper: "Reservas esperando acreditacion.",
+    tone: "warn",
+  },
+  {
+    key: "confirmedPayment",
+    title: "Pago confirmado",
+    icon: CheckCircle2,
+    helper: "Pedidos listos para pasar a armado.",
+  },
+  {
+    key: "inPreparation",
+    title: "En preparacion",
+    icon: Package,
+    helper: "Pedidos hoy en armado operativo.",
+  },
+  {
+    key: "dispatched",
+    title: "Despachados",
+    icon: Truck,
+    helper: "Salieron a entrega o sucursal.",
+  },
+  {
+    key: "delivered",
+    title: "Entregados",
+    icon: PackageCheck,
+    helper: "Ventas ya cerradas comercialmente.",
+  },
+  {
+    key: "cancelled",
+    title: "Cancelado o vencido",
+    icon: PackageX,
+    helper: "Pedidos caidos para revisar causa.",
+    tone: "danger",
+  },
+  {
+    key: "confirmedRevenue",
+    title: "Facturacion confirmada",
+    icon: BadgeDollarSign,
+    helper: "Ingresos consolidados con pago validado.",
+    format: formatCurrency,
+    tone: "highlight",
+  },
+];
 
 function AdminOverviewPage() {
   const realOrders = useMemo(() => getOrders(), []);
@@ -33,6 +101,11 @@ function AdminOverviewPage() {
           Vista general para seguir cobros, preparacion, despachos, entregas, ventas y alertas de
           stock desde un solo panel.
         </span>
+        <div className="admin-page-header-meta">
+          <span>Panel administrativo</span>
+          <span>Operacion comercial diaria</span>
+          <span>{orders.length} pedidos visibles</span>
+        </div>
       </header>
 
       {useDemoData && (
@@ -42,49 +115,33 @@ function AdminOverviewPage() {
       )}
 
       <section className="admin-kpi-grid">
-        <article>
-          <p>Pedidos totales</p>
-          <strong>{metrics.totalOrders}</strong>
-        </article>
-        <article>
-          <p>Pendiente de pago</p>
-          <strong>{metrics.pendingPayment}</strong>
-        </article>
-        <article>
-          <p>Pago confirmado</p>
-          <strong>{metrics.confirmedPayment}</strong>
-        </article>
-        <article>
-          <p>En preparacion</p>
-          <strong>{metrics.inPreparation}</strong>
-        </article>
-        <article>
-          <p>Despachados</p>
-          <strong>{metrics.dispatched}</strong>
-        </article>
-        <article>
-          <p>Entregados</p>
-          <strong>{metrics.delivered}</strong>
-        </article>
-        <article>
-          <p>Cancelado/vencido</p>
-          <strong>{metrics.cancelled}</strong>
-        </article>
-        <article>
-          <p>Facturacion confirmada</p>
-          <strong>{formatCurrency(metrics.confirmedRevenue)}</strong>
-        </article>
+        {dashboardMetricConfig.map((item) => (
+          <AdminStatCard
+            key={item.key}
+            icon={item.icon}
+            title={item.title}
+            value={item.format ? item.format(metrics[item.key]) : metrics[item.key]}
+            helper={item.helper}
+            tone={item.tone}
+          />
+        ))}
       </section>
 
       <section className="admin-card">
         <div className="admin-card-title">
-          <h2>Flujo operativo de pedidos</h2>
+          <div>
+            <span className="admin-card-kicker">Operacion</span>
+            <h2>Flujo operativo de pedidos</h2>
+          </div>
           <Link to="/admin/pedidos">Ir a gestion de pedidos</Link>
         </div>
         <ol className="workflow-grid">
-          {ADMIN_WORKFLOW_STEPS.map((step) => (
+          {ADMIN_WORKFLOW_STEPS.map((step, index) => (
             <li key={step.status}>
-              <OrderStatusBadge status={step.status} />
+              <div className="workflow-step-top">
+                <span className="workflow-step-index">0{index + 1}</span>
+                <OrderStatusBadge status={step.status} />
+              </div>
               <p>{step.action}</p>
               <small>{step.stockImpact}</small>
             </li>
@@ -95,11 +152,18 @@ function AdminOverviewPage() {
       <section className="admin-two-col">
         <article className="admin-card">
           <div className="admin-card-title">
-            <h2>Pedidos recientes</h2>
+            <div>
+              <span className="admin-card-kicker">Seguimiento</span>
+              <h2>Pedidos recientes</h2>
+            </div>
             <Link to="/admin/pedidos">Abrir lista completa</Link>
           </div>
           {!recentOrders.length ? (
-            <p>No hay pedidos aun. Se cargan desde checkout cliente.</p>
+            <AdminEmptyState
+              compact
+              title="Todavia no hay pedidos recientes"
+              description="Cuando entren ventas desde el checkout, las ultimas operaciones van a aparecer aca."
+            />
           ) : (
             <ul className="admin-simple-list">
               {recentOrders.map((order) => (
@@ -121,18 +185,25 @@ function AdminOverviewPage() {
 
         <article className="admin-card">
           <div className="admin-card-title">
-            <h2>Top productos vendidos</h2>
+            <div>
+              <span className="admin-card-kicker">Rotacion</span>
+              <h2>Top productos vendidos</h2>
+            </div>
             <Link to="/admin/productos">Gestionar productos</Link>
           </div>
           {!topProducts.length ? (
-            <p>Sin ventas confirmadas todavia.</p>
+            <AdminEmptyState
+              compact
+              title="Sin ventas confirmadas todavia"
+              description="A medida que se entreguen pedidos, vas a poder detectar rapido los productos con mejor salida."
+            />
           ) : (
             <ul className="admin-simple-list">
               {topProducts.map((item) => (
                 <li key={item.id}>
                   <div>
                     <b>{item.name}</b>
-                    <small>{item.quantity} unidades</small>
+                    <small>{item.quantity} unidades vendidas</small>
                   </div>
                   <b>{formatCurrency(item.revenue)}</b>
                 </li>
@@ -144,21 +215,35 @@ function AdminOverviewPage() {
 
       <section className="admin-card">
         <div className="admin-card-title">
-          <h2>Alertas de stock bajo</h2>
+          <div>
+            <span className="admin-card-kicker">Inventario</span>
+            <h2>Alertas de stock bajo</h2>
+          </div>
           <Link to="/admin/stock">Configurar umbral global</Link>
         </div>
-        <ul className="stock-alerts">
-          {lowStockProducts.map((product) => (
-            <li key={product.id}>
-              <img src={product.image} alt={product.name} />
-              <div>
-                <b>{product.name}</b>
-                <small>{product.category}</small>
-              </div>
-              <strong>{product.stock} u.</strong>
-            </li>
-          ))}
-        </ul>
+        {!lowStockProducts.length ? (
+          <AdminEmptyState
+            compact
+            title="No hay alertas criticas por ahora"
+            description="El stock actual esta por encima del umbral definido para toda la tienda."
+          />
+        ) : (
+          <ul className="stock-alerts">
+            {lowStockProducts.map((product) => (
+              <li key={product.id}>
+                <img src={product.image} alt={product.name} />
+                <div>
+                  <b>{product.name}</b>
+                  <small>{product.category}</small>
+                </div>
+                <strong>
+                  <AlertTriangle size={15} />
+                  {product.stock} u.
+                </strong>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

@@ -39,6 +39,7 @@ function HomePage() {
   ];
 
   const currentSlide = heroSlides[activePromo] || heroSlides[0];
+  const showHeroOverlay = currentSlide?.showOverlay !== false;
 
   const showPrevPromo = () => {
     setActivePromo((current) => (current - 1 + heroSlides.length) % heroSlides.length);
@@ -51,10 +52,17 @@ function HomePage() {
   return (
     <div className="home-page">
       <section className="hero-carousel-section" aria-label="Carrusel principal de promociones">
-        <article
-          className="hero-carousel-slide"
-          style={{ "--hero-image": `url("${currentSlide.image}")` }}
-        >
+        <article className="hero-carousel-slide">
+          <div className="hero-carousel-stage" aria-hidden="true">
+            {heroSlides.map((slide, index) => (
+              <div
+                key={slide.id}
+                className={`hero-carousel-bg ${index === activePromo ? "active" : ""} ${slide.showOverlay === false ? "image-only" : ""}`}
+                style={{ "--hero-image": `url("${slide.image}")` }}
+              />
+            ))}
+          </div>
+
           <button
             type="button"
             className="hero-carousel-arrow left"
@@ -73,38 +81,45 @@ function HomePage() {
             <ChevronRight size={24} />
           </button>
 
-          <div className="container hero-carousel-content">
-            <div className="hero-carousel-copy">
-              <p className="hero-carousel-kicker">{currentSlide.kicker}</p>
-              <h1>
-                <span>{currentSlide.titleLead}</span>
-                <strong>{currentSlide.titleHighlight}</strong>
-                <em>{currentSlide.titleTail}</em>
-              </h1>
-              <p className="hero-carousel-description">{currentSlide.description}</p>
+          <div className={`container hero-carousel-content ${showHeroOverlay ? "" : "image-only"}`}>
+            {showHeroOverlay && (
+              <div key={currentSlide.id} className="hero-carousel-copy hero-carousel-copy-enter">
+                <p className="hero-carousel-kicker">{currentSlide.kicker}</p>
+                <h1>
+                  <span>{currentSlide.titleLead}</span>
+                  <strong>{currentSlide.titleHighlight}</strong>
+                  <em>{currentSlide.titleTail}</em>
+                </h1>
+                <p className="hero-carousel-description">{currentSlide.description}</p>
 
-              <div className="hero-carousel-badges">
-                {currentSlide.badges.map((badge) => (
-                  <span key={badge}>{badge}</span>
-                ))}
-              </div>
+                <div className="hero-carousel-badges">
+                  {currentSlide.badges.map((badge) => (
+                    <span key={badge}>{badge}</span>
+                  ))}
+                </div>
 
-              <div className="hero-actions">
-                <Link to="/catalogo" className="btn-primary">
-                  Ver productos
-                </Link>
-                <Link to="/promos" className="btn-outline hero-outline-light">
-                  Ver promos
-                </Link>
+                <div className="hero-actions">
+                  <Link to="/catalogo" className="btn-primary">
+                    Ver productos
+                  </Link>
+                  <Link to="/promos" className="btn-outline hero-outline-light">
+                    Ver promos
+                  </Link>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="hero-carousel-bottom">
-              <div className="hero-carousel-stats">
-                {currentSlide.stats.map((stat) => (
-                  <span key={stat}>{stat}</span>
-                ))}
-              </div>
+            <div
+              key={`${currentSlide.id}-bottom`}
+              className={`hero-carousel-bottom hero-carousel-bottom-enter ${showHeroOverlay ? "" : "solo-dots"}`}
+            >
+              {showHeroOverlay && currentSlide.stats.length > 0 && (
+                <div className="hero-carousel-stats">
+                  {currentSlide.stats.map((stat) => (
+                    <span key={stat}>{stat}</span>
+                  ))}
+                </div>
+              )}
 
               <div className="hero-carousel-dots" aria-label="Seleccionar slide">
                 {heroSlides.map((slide, index) => (
@@ -129,8 +144,8 @@ function HomePage() {
           subtitle="Precios especiales por transferencia y combos limitados."
         />
         <div className="product-grid six-col">
-          {promos.map((product) => (
-            <ProductCard key={product.id} product={product} compact />
+          {promos.map((product, index) => (
+            <ProductCard key={product.id} product={product} compact revealIndex={index} />
           ))}
         </div>
       </section>
@@ -162,8 +177,8 @@ function HomePage() {
             light
           />
           <div className="product-grid six-col">
-            {combos.map((product) => (
-              <ProductCard key={product.id} product={product} compact />
+            {combos.map((product, index) => (
+              <ProductCard key={product.id} product={product} compact revealIndex={index} />
             ))}
           </div>
         </div>
@@ -176,8 +191,8 @@ function HomePage() {
           subtitle="Productos con mejor rendimiento segun la comunidad."
         />
         <div className="product-grid six-col">
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} product={product} compact />
+          {bestSellers.map((product, index) => (
+            <ProductCard key={product.id} product={product} compact revealIndex={index} />
           ))}
         </div>
       </section>

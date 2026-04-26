@@ -1,4 +1,13 @@
 import { useMemo, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  FileSpreadsheet,
+  ImagePlus,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { products as initialProducts } from "../../data/products";
 import { formatCurrency } from "../../utils/currency";
 
@@ -250,40 +259,71 @@ function AdminProductsPage() {
   };
 
   return (
-    <div className="admin-page-root">
-      <header className="admin-page-header">
+    <div className="admin-page-root products-admin-page">
+      <header className="admin-page-header products-admin-header">
         <p>Productos</p>
         <h1>ABM de catalogo, importacion y galerias</h1>
         <span>
           Alta rapida, edicion de precios, vista de carga por Excel y gestion multiple de imagenes
           por producto.
         </span>
+        <div className="products-admin-header-meta">
+          <span>
+            <strong>{products.length}</strong> productos editables
+          </span>
+          <span>
+            <strong>{visibleProducts.length}</strong> visibles en esta vista
+          </span>
+          <span>
+            <strong>{selectedProduct?.gallery?.length || 0}</strong> imagenes en la galeria actual
+          </span>
+        </div>
       </header>
 
-      <section className="admin-card">
-        <h2>Que significa "Destacado"</h2>
+      <section className="admin-card products-highlight-card">
+        <div className="products-section-head compact">
+          <div>
+            <p>Curaduria comercial</p>
+            <h2>Que significa "Destacado"</h2>
+          </div>
+        </div>
         <p>
           Un producto marcado como <b>Destacado</b> se prioriza en la home y en bloques comerciales
           como "Los mas elegidos" o secciones de recomendados.
         </p>
-        <p>
-          Sirve para empujar productos con mejor margen, promos activas o lanzamientos.
-        </p>
+        <p>Sirve para empujar productos con mejor margen, promos activas o lanzamientos.</p>
       </section>
 
-      <section className="admin-two-col">
-        <article className="admin-card">
-          <h2>Carga de productos por Excel</h2>
-          <div className="admin-upload-box">
-            <p>Subi un archivo `.xlsx`, `.xls` o `.csv` para preparar una carga masiva.</p>
-            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelFileChange} />
-            <small>
-              Alcance actual del prototipo: vista para carga de <b>productos nuevos</b>. No pisa
-              productos existentes.
-            </small>
-            {excelFileName && <strong>{excelFileName}</strong>}
+      <section className="admin-two-col products-support-grid">
+        <article className="admin-card products-step-card">
+          <div className="products-section-head">
+            <div>
+              <p>Importacion</p>
+              <h2>Carga de productos por Excel</h2>
+            </div>
+            <span className="products-section-icon">
+              <FileSpreadsheet size={18} />
+            </span>
           </div>
-          <div className="excel-columns-grid">
+          <label className="products-upload-card">
+            <div className="products-upload-head">
+              <span className="products-upload-icon">
+                <Upload size={18} />
+              </span>
+              <div>
+                <strong>Subi un archivo para preparar la carga masiva</strong>
+                <small>Compatible con `.xlsx`, `.xls` y `.csv`</small>
+              </div>
+            </div>
+            <span className="products-upload-trigger">Seleccionar archivo</span>
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelFileChange} />
+          </label>
+          <p className="products-helper-copy">
+            Alcance actual del prototipo: vista para carga de <b>productos nuevos</b>. No pisa
+            productos existentes.
+          </p>
+          {excelFileName && <p className="products-file-pill">{excelFileName}</p>}
+          <div className="excel-columns-grid products-excel-columns-grid">
             {excelColumns.map((column) => (
               <span key={column}>{column}</span>
             ))}
@@ -291,10 +331,21 @@ function AdminProductsPage() {
           {excelMessage && <p className="admin-message">{excelMessage}</p>}
         </article>
 
-        <article className="admin-card">
-          <h2>Vista previa del formato</h2>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+        <article className="admin-card products-step-card products-step-card--preview">
+          <div className="products-section-head">
+            <div>
+              <p>Estructura sugerida</p>
+              <h2>Vista previa del formato</h2>
+            </div>
+            <span className="products-section-icon">
+              <FileSpreadsheet size={18} />
+            </span>
+          </div>
+          <p className="products-helper-copy">
+            Usa estas columnas para armar el archivo y acelerar la carga del catalogo.
+          </p>
+          <div className="admin-table-wrap products-excel-preview-wrap">
+            <table className="admin-table products-excel-preview-table">
               <thead>
                 <tr>
                   {excelColumns.map((column) => (
@@ -321,21 +372,33 @@ function AdminProductsPage() {
         </article>
       </section>
 
-      <section className="admin-card">
-        <div className="admin-toolbar">
-          <input
-            type="search"
-            value={query}
-            placeholder="Buscar por SKU, nombre, marca o categoria"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+      <section className="admin-card products-table-card">
+        <div className="products-section-head">
+          <div>
+            <p>Catalogo activo</p>
+            <h2>Edicion rapida de precios, stock y visibilidad</h2>
+          </div>
+        </div>
+        <div className="admin-toolbar products-toolbar">
+          <label className="products-search-shell">
+            <Search size={17} />
+            <input
+              type="search"
+              value={query}
+              placeholder="Buscar por SKU, nombre, marca o categoria"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <p className="products-toolbar-status">
+            {visibleProducts.length} productos visibles de {products.length}
+          </p>
           <button type="button" onClick={saveChanges}>
             Guardar cambios
           </button>
         </div>
 
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table products-catalog-table">
             <thead>
               <tr>
                 <th>Producto</th>
@@ -352,7 +415,7 @@ function AdminProductsPage() {
               {visibleProducts.map((product) => (
                 <tr key={product.id}>
                   <td>
-                    <div className="table-product">
+                    <div className="table-product products-table-product">
                       <img src={product.image} alt={product.name} />
                       <div>
                         <b>{product.name}</b>
@@ -360,38 +423,57 @@ function AdminProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td>{product.sku}</td>
-                  <td>{product.category}</td>
                   <td>
-                    <input
-                      type="number"
-                      value={product.price}
-                      onChange={(event) =>
-                        updateField(product.id, "price", Number(event.target.value || 0))
-                      }
-                    />
-                    <small>{formatCurrency(product.price)}</small>
+                    <span className="products-data-chip">{product.sku}</span>
                   </td>
                   <td>
-                    <input
-                      type="number"
-                      value={product.transferPrice || ""}
-                      onChange={(event) =>
-                        updateField(product.id, "transferPrice", Number(event.target.value || 0))
-                      }
-                    />
+                    <span className="products-data-chip soft">{product.category}</span>
                   </td>
                   <td>
-                    <input
-                      type="number"
-                      value={product.stock}
-                      onChange={(event) =>
-                        updateField(product.id, "stock", Number(event.target.value || 0))
-                      }
-                    />
+                    <div className="products-table-field">
+                      <label className="products-table-input-shell">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          value={product.price}
+                          onChange={(event) =>
+                            updateField(product.id, "price", Number(event.target.value || 0))
+                          }
+                        />
+                      </label>
+                      <small>{formatCurrency(product.price)}</small>
+                    </div>
                   </td>
                   <td>
-                    <label className="switch-inline">
+                    <div className="products-table-field">
+                      <label className="products-table-input-shell">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          value={product.transferPrice || ""}
+                          onChange={(event) =>
+                            updateField(product.id, "transferPrice", Number(event.target.value || 0))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="products-table-field">
+                      <label className="products-table-input-shell unit">
+                        <span>u</span>
+                        <input
+                          type="number"
+                          value={product.stock}
+                          onChange={(event) =>
+                            updateField(product.id, "stock", Number(event.target.value || 0))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </td>
+                  <td>
+                    <label className="switch-inline products-switch-inline">
                       <input
                         type="checkbox"
                         checked={product.active}
@@ -401,7 +483,7 @@ function AdminProductsPage() {
                     </label>
                   </td>
                   <td>
-                    <label className="switch-inline">
+                    <label className="switch-inline products-switch-inline">
                       <input
                         type="checkbox"
                         checked={product.highlighted}
@@ -419,10 +501,21 @@ function AdminProductsPage() {
         </div>
       </section>
 
-      <section className="admin-two-col">
-        <article className="admin-card">
-          <h2>Alta rapida de producto (demo frontend)</h2>
-          <form className="admin-inline-form product-inline-form" onSubmit={createProduct}>
+      <section className="admin-two-col products-support-grid products-bottom-grid">
+        <article className="admin-card products-step-card">
+          <div className="products-section-head">
+            <div>
+              <p>Alta manual</p>
+              <h2>Alta rapida de producto</h2>
+            </div>
+          </div>
+          <p className="products-helper-copy">
+            Crea productos demo en segundos para completar el catalogo y seguir operando.
+          </p>
+          <form
+            className="admin-inline-form product-inline-form products-create-form"
+            onSubmit={createProduct}
+          >
             <input
               type="text"
               placeholder="SKU"
@@ -472,9 +565,20 @@ function AdminProductsPage() {
           {message && <p className="admin-message">{message}</p>}
         </article>
 
-        <article className="admin-card">
-          <h2>Subida multiple de imagenes por producto</h2>
-          <div className="gallery-admin-toolbar">
+        <article className="admin-card products-step-card">
+          <div className="products-section-head">
+            <div>
+              <p>Activos visuales</p>
+              <h2>Subida multiple de imagenes por producto</h2>
+            </div>
+            <span className="products-section-icon">
+              <ImagePlus size={18} />
+            </span>
+          </div>
+          <p className="products-helper-copy">
+            Elegi el producto, carga varias imagenes y ordena la galeria antes de guardar.
+          </p>
+          <div className="gallery-admin-toolbar products-gallery-toolbar">
             <select
               value={selectedProductId}
               onChange={(event) => setSelectedProductId(event.target.value)}
@@ -485,9 +589,13 @@ function AdminProductsPage() {
                 </option>
               ))}
             </select>
-            <input type="file" accept="image/*" multiple onChange={handleGalleryFiles} />
+            <label className="products-gallery-upload">
+              <Upload size={16} />
+              <span>Cargar imagenes</span>
+              <input type="file" accept="image/*" multiple onChange={handleGalleryFiles} />
+            </label>
           </div>
-          <div className="gallery-url-row">
+          <div className="gallery-url-row products-gallery-url-row">
             <input
               type="url"
               placeholder="O pega una URL de imagen"
@@ -498,23 +606,40 @@ function AdminProductsPage() {
               Agregar URL
             </button>
           </div>
-          <ul className="gallery-admin-list">
+          <ul className="gallery-admin-list products-gallery-list">
             {(selectedProduct?.gallery || []).map((image, index) => (
               <li key={`${selectedProduct?.id}-${image}-${index}`}>
                 <img src={image} alt={`${selectedProduct?.name} ${index + 1}`} />
-                <div>
+                <div className="products-gallery-copy">
                   <b>Imagen {index + 1}</b>
                   <small>{index === 0 ? "Principal" : "Secundaria"}</small>
                 </div>
-                <div className="promo-actions">
-                  <button type="button" onClick={() => moveGalleryImage(index, "left")}>
-                    Subir
+                <div className="products-gallery-actions">
+                  <button
+                    type="button"
+                    title="Mover hacia arriba"
+                    aria-label="Mover hacia arriba"
+                    disabled={index === 0}
+                    onClick={() => moveGalleryImage(index, "left")}
+                  >
+                    <ArrowUp size={15} />
                   </button>
-                  <button type="button" onClick={() => moveGalleryImage(index, "right")}>
-                    Bajar
+                  <button
+                    type="button"
+                    title="Mover hacia abajo"
+                    aria-label="Mover hacia abajo"
+                    disabled={index === (selectedProduct?.gallery?.length || 0) - 1}
+                    onClick={() => moveGalleryImage(index, "right")}
+                  >
+                    <ArrowDown size={15} />
                   </button>
-                  <button type="button" onClick={() => removeGalleryImage(index)}>
-                    Quitar
+                  <button
+                    type="button"
+                    title="Quitar imagen"
+                    aria-label="Quitar imagen"
+                    onClick={() => removeGalleryImage(index)}
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </li>

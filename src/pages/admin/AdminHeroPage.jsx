@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Eye, EyeOff, ImagePlus, LayoutTemplate, Rows3 } from "lucide-react";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { heroPromoSlides } from "../../data/homePromos";
 import { HERO_SLIDES_STORAGE_KEY, normalizeHeroSlides } from "../../utils/heroSlides";
@@ -6,13 +8,6 @@ import { HERO_SLIDES_STORAGE_KEY, normalizeHeroSlides } from "../../utils/heroSl
 const baseDraft = {
   id: "",
   image: "",
-  kicker: "",
-  titleLead: "",
-  titleHighlight: "",
-  titleTail: "",
-  description: "",
-  badgesText: "",
-  statsText: "",
   active: true,
   order: 1,
 };
@@ -21,13 +16,6 @@ function slideToDraft(slide) {
   return {
     id: slide.id,
     image: slide.image,
-    kicker: slide.kicker,
-    titleLead: slide.titleLead,
-    titleHighlight: slide.titleHighlight,
-    titleTail: slide.titleTail,
-    description: slide.description,
-    badgesText: slide.badges.join(", "),
-    statsText: slide.stats.join(", "),
     active: slide.active,
     order: slide.order,
   };
@@ -37,19 +25,14 @@ function draftToSlide(draft) {
   return {
     id: draft.id || `hero_${Date.now()}`,
     image: draft.image.trim(),
-    kicker: draft.kicker.trim(),
-    titleLead: draft.titleLead.trim(),
-    titleHighlight: draft.titleHighlight.trim(),
-    titleTail: draft.titleTail.trim(),
-    description: draft.description.trim(),
-    badges: draft.badgesText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-    stats: draft.statsText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
+    kicker: "",
+    titleLead: "",
+    titleHighlight: "",
+    titleTail: "",
+    description: "",
+    badges: [],
+    stats: [],
+    showOverlay: false,
     active: draft.active,
     order: Number(draft.order || 1),
   };
@@ -73,8 +56,6 @@ function AdminHeroPage() {
     setDraft({
       ...baseDraft,
       order: orderedSlides.length + 1,
-      badgesText: "2x1 en destacados, 3x2 en seleccionados",
-      statsText: "Marcas oficiales, Atencion personalizada, Envios a todo el pais",
     });
   };
 
@@ -85,8 +66,8 @@ function AdminHeroPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!draft.image.trim() || !draft.titleHighlight.trim() || !draft.description.trim()) {
-      setMessage("Completa imagen, titulo principal y descripcion para guardar el banner.");
+    if (!draft.image.trim()) {
+      setMessage("Completa la imagen del banner para guardarlo.");
       return;
     }
 
@@ -123,35 +104,48 @@ function AdminHeroPage() {
     <div className="admin-page-root">
       <header className="admin-page-header">
         <p>Hero</p>
-        <h1>ABM del carrusel principal</h1>
+        <h1>Gestion simple de banners</h1>
         <span>
-          Carga, edita, activa, desactiva y ordena los banners que se muestran en el hero del home.
+          Carga la imagen del banner, ordenala y activala para mostrarla en el carrusel principal.
         </span>
       </header>
 
       <section className="admin-kpi-grid">
-        <article>
-          <p>Banners totales</p>
-          <strong>{orderedSlides.length}</strong>
-        </article>
-        <article>
-          <p>Banners activos</p>
-          <strong>{activeSlides.length}</strong>
-        </article>
-        <article>
-          <p>Inactivos</p>
-          <strong>{Math.max(0, orderedSlides.length - activeSlides.length)}</strong>
-        </article>
-        <article>
-          <p>Uso sugerido</p>
-          <strong>3 a 5 slides</strong>
-        </article>
+        <AdminStatCard
+          icon={LayoutTemplate}
+          title="Banners totales"
+          value={orderedSlides.length}
+          helper="Cantidad administrada desde este modulo."
+        />
+        <AdminStatCard
+          icon={Eye}
+          title="Banners activos"
+          value={activeSlides.length}
+          helper="Se muestran hoy dentro del home."
+        />
+        <AdminStatCard
+          icon={EyeOff}
+          title="Inactivos"
+          value={Math.max(0, orderedSlides.length - activeSlides.length)}
+          helper="Guardados pero pausados comercialmente."
+          tone="warn"
+        />
+        <AdminStatCard
+          icon={Rows3}
+          title="Uso sugerido"
+          value="3 a 5 slides"
+          helper="Volumen ideal para mantener impacto visual."
+          tone="highlight"
+        />
       </section>
 
       <section className="admin-two-col">
         <article className="admin-card">
           <div className="admin-card-title">
-            <h2>Banners cargados</h2>
+            <div>
+              <span className="admin-card-kicker">CMS visual</span>
+              <h2>Banners cargados</h2>
+            </div>
             <button type="button" className="admin-secondary-btn" onClick={resetDraft}>
               Nuevo banner
             </button>
@@ -159,13 +153,11 @@ function AdminHeroPage() {
           <div className="hero-admin-list">
             {orderedSlides.map((slide) => (
               <article key={slide.id} className={`hero-admin-card ${slide.active ? "on" : "off"}`}>
-                <img src={slide.image} alt={slide.titleHighlight} />
+                <img src={slide.image} alt={`Banner ${slide.order}`} />
                 <div>
-                  <strong>
-                    {slide.titleLead} {slide.titleHighlight}
-                  </strong>
+                  <strong>Banner #{slide.order}</strong>
                   <small>Orden {slide.order}</small>
-                  <small>{slide.kicker}</small>
+                  <small>{slide.active ? "Visible en el home" : "Pausado"}</small>
                 </div>
                 <div className="promo-actions">
                   <button type="button" onClick={() => handleEdit(slide)}>
@@ -184,53 +176,20 @@ function AdminHeroPage() {
         </article>
 
         <article className="admin-card">
-          <h2>{draft.id ? "Editar banner" : "Alta de banner"}</h2>
+          <div className="admin-card-title">
+            <div>
+              <span className="admin-card-kicker">Edicion</span>
+              <h2>{draft.id ? "Actualizar banner" : "Cargar banner"}</h2>
+            </div>
+          </div>
           <form className="hero-admin-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="hero-admin-wide">
               URL de imagen
               <input
                 type="url"
                 placeholder="https://..."
                 value={draft.image}
                 onChange={(event) => setDraft((prev) => ({ ...prev, image: event.target.value }))}
-              />
-            </label>
-            <label>
-              Kicker
-              <input
-                type="text"
-                value={draft.kicker}
-                onChange={(event) => setDraft((prev) => ({ ...prev, kicker: event.target.value }))}
-              />
-            </label>
-            <label>
-              Titulo linea 1
-              <input
-                type="text"
-                value={draft.titleLead}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, titleLead: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Titulo destacado
-              <input
-                type="text"
-                value={draft.titleHighlight}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, titleHighlight: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Titulo linea 3
-              <input
-                type="text"
-                value={draft.titleTail}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, titleTail: event.target.value }))
-                }
               />
             </label>
             <label>
@@ -242,36 +201,6 @@ function AdminHeroPage() {
                 onChange={(event) => setDraft((prev) => ({ ...prev, order: event.target.value }))}
               />
             </label>
-            <label className="hero-admin-wide">
-              Descripcion
-              <textarea
-                rows="3"
-                value={draft.description}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, description: event.target.value }))
-                }
-              />
-            </label>
-            <label className="hero-admin-wide">
-              Badges separados por coma
-              <input
-                type="text"
-                value={draft.badgesText}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, badgesText: event.target.value }))
-                }
-              />
-            </label>
-            <label className="hero-admin-wide">
-              Stats separadas por coma
-              <input
-                type="text"
-                value={draft.statsText}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, statsText: event.target.value }))
-                }
-              />
-            </label>
             <label className="switch-inline">
               <input
                 type="checkbox"
@@ -280,6 +209,10 @@ function AdminHeroPage() {
               />
               <span>Banner activo en el home</span>
             </label>
+            <p className="hero-admin-helper">
+              Este modulo administra solo la imagen del banner. El slide se muestra limpio, sin
+              textos superpuestos.
+            </p>
             <div className="hero-admin-actions">
               <button type="submit">{draft.id ? "Guardar cambios" : "Crear banner"}</button>
               <button type="button" className="admin-secondary-btn" onClick={resetDraft}>
@@ -292,19 +225,22 @@ function AdminHeroPage() {
       </section>
 
       <section className="admin-card">
-        <h2>Vista previa</h2>
+        <div className="admin-card-title">
+          <div>
+            <span className="admin-card-kicker">Preview</span>
+            <h2>Vista previa del banner</h2>
+          </div>
+        </div>
         <article
           className="hero-admin-preview"
           style={{ "--hero-preview": `url("${draft.image || activeSlides[0]?.image || "/assets/products/combo-estrella.jpg"}")` }}
         >
           <div className="hero-admin-preview-copy">
-            <p>{draft.kicker || "Grizzly suplementos"}</p>
+            <p>Vista previa del banner</p>
             <h3>
-              <span>{draft.titleLead || "Encontra"}</span>
-              <strong>{draft.titleHighlight || "tu proximo banner"}</strong>
-              <em>{draft.titleTail || "principal"}</em>
+              <strong>{draft.active ? "Banner activo" : "Banner pausado"}</strong>
             </h3>
-            <small>{draft.description || "Este bloque te muestra como se va a ver el hero."}</small>
+            <small>Orden {draft.order || 1} dentro del carrusel principal.</small>
           </div>
         </article>
       </section>

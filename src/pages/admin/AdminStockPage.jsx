@@ -1,4 +1,6 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { AlertCircle, Boxes, PackageCheck, TriangleAlert } from "lucide-react";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 import { products } from "../../data/products";
 
 const STOCK_THRESHOLD_KEY = "grizzly_low_stock_threshold";
@@ -27,6 +29,11 @@ function getStockLevel(stock, threshold) {
   return "ok";
 }
 
+function getStockPercent(stock, threshold) {
+  const safeCap = Math.max(threshold * 2, 1);
+  return Math.min(100, Math.max(6, Math.round((stock / safeCap) * 100)));
+}
+
 function AdminStockPage() {
   const [threshold, setThreshold] = useState(readThreshold());
 
@@ -36,6 +43,7 @@ function AdminStockPage() {
         .map((product) => ({
           ...product,
           level: getStockLevel(product.stock, threshold),
+          percent: getStockPercent(product.stock, threshold),
         }))
         .sort((a, b) => a.stock - b.stock),
     [threshold],
@@ -66,7 +74,12 @@ function AdminStockPage() {
       </header>
 
       <section className="admin-card">
-        <h2>Configuracion global</h2>
+        <div className="admin-card-title">
+          <div>
+            <span className="admin-card-kicker">Configuracion</span>
+            <h2>Umbral global de inventario</h2>
+          </div>
+        </div>
         <form className="admin-threshold-form" onSubmit={applyThreshold}>
           <label>
             Umbral de stock bajo para toda la tienda
@@ -86,28 +99,44 @@ function AdminStockPage() {
       </section>
 
       <section className="admin-kpi-grid">
-        <article>
-          <p>Productos criticos</p>
-          <strong>{summary.critical}</strong>
-        </article>
-        <article>
-          <p>Productos bajos</p>
-          <strong>{summary.low}</strong>
-        </article>
-        <article>
-          <p>Stock saludable</p>
-          <strong>{summary.ok}</strong>
-        </article>
-        <article>
-          <p>Total productos</p>
-          <strong>{rows.length}</strong>
-        </article>
+        <AdminStatCard
+          icon={TriangleAlert}
+          title="Productos criticos"
+          value={summary.critical}
+          helper="Necesitan reposicion inmediata."
+          tone="danger"
+        />
+        <AdminStatCard
+          icon={AlertCircle}
+          title="Productos bajos"
+          value={summary.low}
+          helper="Todavia venden, pero ya merecen seguimiento."
+          tone="warn"
+        />
+        <AdminStatCard
+          icon={PackageCheck}
+          title="Stock saludable"
+          value={summary.ok}
+          helper="Estan por encima del umbral definido."
+        />
+        <AdminStatCard
+          icon={Boxes}
+          title="Total productos"
+          value={rows.length}
+          helper="Catalogo hoy controlado desde inventario."
+          tone="highlight"
+        />
       </section>
 
-      <section className="admin-card">
-        <h2>Estado de inventario por producto</h2>
+      <section className="admin-card admin-table-card">
+        <div className="admin-card-title">
+          <div>
+            <span className="admin-card-kicker">Inventario actual</span>
+            <h2>Estado de inventario por producto</h2>
+          </div>
+        </div>
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-stock-table">
             <thead>
               <tr>
                 <th>Producto</th>
@@ -130,11 +159,22 @@ function AdminStockPage() {
                     </div>
                   </td>
                   <td>{product.category}</td>
-                  <td>{product.stock} u.</td>
+                  <td>
+                    <div className="stock-level-cell">
+                      <b>{product.stock} u.</b>
+                      <span>
+                        <i className={product.level} style={{ width: `${product.percent}%` }} />
+                      </span>
+                    </div>
+                  </td>
                   <td>{threshold} u.</td>
                   <td>
                     <span className={`stock-pill ${product.level}`}>
-                      {product.level === "critico" ? "Critico" : product.level === "bajo" ? "Bajo" : "OK"}
+                      {product.level === "critico"
+                        ? "Critico"
+                        : product.level === "bajo"
+                          ? "Bajo"
+                          : "Saludable"}
                     </span>
                   </td>
                 </tr>
