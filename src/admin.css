@@ -3174,9 +3174,11 @@
 }
 
 .products-create-form input,
+.products-create-form textarea,
 .products-create-form button,
 .products-gallery-toolbar select,
 .products-gallery-url-row input,
+.products-description-editor textarea,
 .products-gallery-url-row button {
   min-height: 50px;
   border-radius: 16px;
@@ -3187,18 +3189,36 @@
 }
 
 .products-create-form input,
+.products-create-form textarea,
 .products-gallery-toolbar select,
-.products-gallery-url-row input {
+.products-gallery-url-row input,
+.products-description-editor textarea {
   transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
 .products-create-form input:focus,
+.products-create-form textarea:focus,
 .products-gallery-toolbar select:focus,
-.products-gallery-url-row input:focus {
+.products-gallery-url-row input:focus,
+.products-description-editor textarea:focus {
   outline: none;
   border-color: rgba(95, 200, 193, 0.72);
   background: #fff;
   box-shadow: 0 0 0 4px rgba(95, 200, 193, 0.14);
+}
+
+.products-create-form textarea,
+.products-description-editor textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 14px 15px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.55;
+}
+
+.products-create-form textarea {
+  grid-column: span 4;
 }
 
 .products-admin-page .products-create-form button {
@@ -3213,6 +3233,23 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.products-description-editor {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.products-description-editor span {
+  color: #281c17;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.products-description-editor small {
+  color: #847871;
+  line-height: 1.45;
 }
 
 .products-gallery-upload {

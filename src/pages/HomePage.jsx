@@ -3,10 +3,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/ui/ProductCard";
 import SectionTitle from "../components/ui/SectionTitle";
-import { products } from "../data/products";
+import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import { getActiveHeroSlides } from "../utils/heroSlides";
 
 function HomePage() {
+  const products = useCatalogProducts();
   const [activePromo, setActivePromo] = useState(0);
   const [heroSlides] = useState(() => getActiveHeroSlides());
   const promos = products.filter((product) => product.promo).slice(0, 6);
@@ -61,6 +62,13 @@ function HomePage() {
                 style={{ "--hero-image": `url("${slide.image}")` }}
               />
             ))}
+          </div>
+
+          <div className="hero-carousel-ambient" aria-hidden="true">
+            <span className="hero-orb hero-orb-one" />
+            <span className="hero-orb hero-orb-two" />
+            <span className="hero-orb hero-orb-three" />
+            <span className="hero-sheen-line" />
           </div>
 
           <button

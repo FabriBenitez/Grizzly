@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, Search, ShoppingBag, X } from "lucide-react";
 import { useCart } from "../../context/CartContext";
-import { categories } from "../../data/products";
+import { useCatalogProducts } from "../../hooks/useCatalogProducts";
+import { getCatalogCategories } from "../../utils/catalogStore";
 
 const navigation = [
   { to: "/", label: "Inicio" },
@@ -12,18 +13,20 @@ const navigation = [
 ];
 
 const promoMessages = [
-  "Envio gratis minimo $120.000 en tu compra",
-  "Envios a todo el pais",
-  "Envio gratis minimo $120.000 en tu compra",
-  "Envios a todo el pais",
+  "Envio gratis a partir de $120.000 en tu compra",
+  "Envio gratis a partir de $120.000 en tu compra",
+  "Envio gratis a partir de $120.000 en tu compra",
+
 ];
 
 function Header() {
+  const products = useCatalogProducts();
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [showMega, setShowMega] = useState(false);
   const { summary } = useCart();
   const navigate = useNavigate();
+  const categories = useMemo(() => getCatalogCategories(products), [products]);
 
   const categoryColumns = useMemo(() => {
     const perColumn = Math.ceil(categories.length / 3);
@@ -32,7 +35,7 @@ function Header() {
       categories.slice(perColumn, perColumn * 2),
       categories.slice(perColumn * 2),
     ].filter((column) => column.length > 0);
-  }, []);
+  }, [categories]);
 
   const handleSearch = (event) => {
     event.preventDefault();
@@ -50,8 +53,8 @@ function Header() {
     <header className="site-header">
       <div className="promo-strip" aria-label="Promociones destacadas">
         <div className="promo-strip-track">
-          {[0, 1].map((group) => (
-            <div key={group} className="promo-strip-group" aria-hidden={group === 1}>
+          {[0, 1, 2, 3].map((group) => (
+            <div key={group} className="promo-strip-group" aria-hidden={group > 0}>
               {promoMessages.map((message, index) => (
                 <span key={`${group}-${index}`}>{message}</span>
               ))}

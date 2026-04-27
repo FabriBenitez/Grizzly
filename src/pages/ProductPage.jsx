@@ -7,8 +7,8 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
-import { products } from "../data/products";
 import { useCart } from "../context/CartContext";
+import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
 import ProductCard from "../components/ui/ProductCard";
@@ -16,6 +16,7 @@ import ProductCard from "../components/ui/ProductCard";
 function ProductPage() {
   const { slug } = useParams();
   const { addToCart } = useCart();
+  const products = useCatalogProducts();
   const product = products.find((item) => item.slug === slug);
   const [mainImage, setMainImage] = useState(product?.gallery?.[0] || "");
   const [quantity, setQuantity] = useState(1);

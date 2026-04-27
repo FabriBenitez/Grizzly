@@ -2,8 +2,9 @@
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ui/ProductCard";
 import SectionTitle from "../components/ui/SectionTitle";
-import { brands, categories, products } from "../data/products";
+import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import { filterProducts, sortProducts } from "../utils/catalog";
+import { getCatalogBrands, getCatalogCategories } from "../utils/catalogStore";
 
 function ProductCardSkeleton() {
   return (
@@ -23,6 +24,7 @@ function ProductCardSkeleton() {
 }
 
 function CatalogPage({ onlyPromos = false }) {
+  const products = useCatalogProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => ({
     query: searchParams.get("q") || "",
@@ -35,6 +37,8 @@ function CatalogPage({ onlyPromos = false }) {
   const [sortBy, setSortBy] = useState("mostSold");
   const [isLoading, setIsLoading] = useState(true);
   const skeletonProducts = useMemo(() => Array.from({ length: 10 }, (_, index) => index), []);
+  const categories = useMemo(() => getCatalogCategories(products), [products]);
+  const brands = useMemo(() => getCatalogBrands(products), [products]);
 
   useEffect(() => {
     setFilters((prev) => ({

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,8 +8,8 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { products as initialProducts } from "../../data/products";
 import { formatCurrency } from "../../utils/currency";
+import { readCatalogProducts, saveCatalogProducts } from "../../utils/catalogStore";
 
 const excelColumns = [
   "SKU",
@@ -20,6 +20,7 @@ const excelColumns = [
   "Precio transferencia",
   "Stock",
   "Imagen principal",
+  "Descripcion",
 ];
 
 const excelPreviewRows = [
@@ -32,6 +33,7 @@ const excelPreviewRows = [
     transferPrice: "23898",
     stock: "44",
     image: "https://...",
+    description: "Creatina monohidrato micronizada para fuerza y recuperacion.",
   },
   {
     sku: "WHEY-2LB-ST",
@@ -42,6 +44,7 @@ const excelPreviewRows = [
     transferPrice: "41916",
     stock: "31",
     image: "https://...",
+    description: "Proteina whey de rapida absorcion para recuperacion post entrenamiento.",
   },
 ];
 
@@ -53,15 +56,7 @@ function moveItem(array, fromIndex, toIndex) {
 }
 
 function AdminProductsPage() {
-  const [products, setProducts] = useState(
-    initialProducts.map((product, index) => ({
-      ...product,
-      sku: product.sku || `SKU-${String(index + 1).padStart(4, "0")}`,
-      active: true,
-      highlighted: Boolean(product.featured),
-      gallery: product.gallery || [product.image],
-    })),
-  );
+  const [products, setProducts] = useState(() => readCatalogProducts());
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState({
     sku: "",
@@ -71,13 +66,26 @@ function AdminProductsPage() {
     price: "",
     transferPrice: "",
     stock: "",
+    description: "",
   });
   const [message, setMessage] = useState("");
   const [excelFileName, setExcelFileName] = useState("");
   const [excelMessage, setExcelMessage] = useState("");
-  const [selectedProductId, setSelectedProductId] = useState(initialProducts[0]?.id || "");
+  const [selectedProductId, setSelectedProductId] = useState(
+    () => readCatalogProducts()[0]?.id || "",
+  );
   const [galleryUrl, setGalleryUrl] = useState("");
   const [galleryMessage, setGalleryMessage] = useState("");
+
+  useEffect(() => {
+    saveCatalogProducts(products);
+  }, [products]);
+
+  useEffect(() => {
+    if (!products.some((product) => product.id === selectedProductId)) {
+      setSelectedProductId(products[0]?.id || "");
+    }
+  }, [products, selectedProductId]);
 
   const visibleProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -141,10 +149,11 @@ function AdminProductsPage() {
         highlighted: false,
         image,
         gallery: [image],
-        description: "Producto demo creado desde el panel admin.",
+        description: draft.description.trim() || "Producto demo creado desde el panel admin.",
       },
       ...prev,
     ]);
+    setSelectedProductId(id);
 
     setDraft({
       sku: "",
@@ -154,6 +163,7 @@ function AdminProductsPage() {
       price: "",
       transferPrice: "",
       stock: "",
+      description: "",
     });
     setMessage("Producto demo creado correctamente.");
   };
@@ -364,6 +374,7 @@ function AdminProductsPage() {
                     <td>{row.transferPrice}</td>
                     <td>{row.stock}</td>
                     <td>{row.image}</td>
+                    <td>{row.description}</td>
                   </tr>
                 ))}
               </tbody>
@@ -560,6 +571,13 @@ function AdminProductsPage() {
               value={draft.stock}
               onChange={(event) => setDraft((prev) => ({ ...prev, stock: event.target.value }))}
             />
+            <textarea
+              placeholder="Descripcion del producto para la ficha individual y contenido comercial"
+              value={draft.description}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, description: event.target.value }))
+              }
+            />
             <button type="submit">Crear producto</button>
           </form>
           {message && <p className="admin-message">{message}</p>}
@@ -595,6 +613,20 @@ function AdminProductsPage() {
               <input type="file" accept="image/*" multiple onChange={handleGalleryFiles} />
             </label>
           </div>
+          <label className="products-description-editor">
+            <span>Descripcion comercial del producto seleccionado</span>
+            <textarea
+              rows="4"
+              placeholder="Escribe una descripcion clara, breve y orientada a venta."
+              value={selectedProduct?.description || ""}
+              onChange={(event) =>
+                selectedProduct
+                  ? updateField(selectedProduct.id, "description", event.target.value)
+                  : null
+              }
+            />
+            <small>Esta descripcion ya se usa en la ficha individual del producto.</small>
+          </label>
           <div className="gallery-url-row products-gallery-url-row">
             <input
               type="url"
