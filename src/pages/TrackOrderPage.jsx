@@ -3,14 +3,21 @@ import { useSearchParams } from "react-router-dom";
 import OrderStatusBadge from "../components/ui/OrderStatusBadge";
 import { ORDER_STATUSES } from "../data/constants";
 import { findOrderByNumberAndPhone, updateOrderStatus } from "../utils/orders";
+import { fetchPublicOrderTracking } from "../utils/orders.remote";
 import { formatCompactDate, formatCurrency } from "../utils/currency";
 
 function normalizeOrderInput(value) {
-  const numeric = String(value || "").replace(/\D/g, "");
-  if (!numeric) {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
     return "";
   }
-  return numeric.padStart(6, "0");
+
+  if (/^\d+$/.test(raw)) {
+    return raw.padStart(6, "0");
+  }
+
+  return raw.toUpperCase();
 }
 
 function TrackOrderPage() {
@@ -19,6 +26,7 @@ function TrackOrderPage() {
   const [phone, setPhone] = useState(searchParams.get("telefono") || "");
   const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
+  const [searching, setSearching] = useState(false);
 
   const timeline = useMemo(() => {
     if (!order) {
@@ -36,24 +44,38 @@ function TrackOrderPage() {
     }));
   }, [order]);
 
-  const runSearch = (rawOrder, rawPhone) => {
+  const runSearch = async (rawOrder, rawPhone) => {
     const normalizedOrder = normalizeOrderInput(rawOrder);
+
     if (!normalizedOrder) {
       setError("Ingresa un numero de pedido.");
       setOrder(null);
       return;
     }
 
-    const found = findOrderByNumberAndPhone(normalizedOrder, rawPhone || "");
-    if (!found) {
-      setError("No encontramos un pedido con esos datos.");
-      setOrder(null);
-      return;
-    }
+    setSearching(true);
 
-    setError("");
-    setOrder(found);
-    setOrderNumber(normalizedOrder);
+    try {
+      const remoteOrder = await fetchPublicOrderTracking(normalizedOrder, rawPhone || "");
+      setError("");
+      setOrder(remoteOrder);
+      setOrderNumber(normalizedOrder);
+      return;
+    } catch {
+      const localOrder = findOrderByNumberAndPhone(normalizedOrder, rawPhone || "");
+
+      if (!localOrder) {
+        setError("No encontramos un pedido con esos datos.");
+        setOrder(null);
+        return;
+      }
+
+      setError("");
+      setOrder(localOrder);
+      setOrderNumber(normalizedOrder);
+    } finally {
+      setSearching(false);
+    }
   };
 
   useEffect(() => {
@@ -62,23 +84,33 @@ function TrackOrderPage() {
     }
   }, [searchParams]);
 
-  const handleSearch = (event) => {
+  const handleSearch = async (event) => {
     event.preventDefault();
-    runSearch(orderNumber, phone);
+    await runSearch(orderNumber, phone);
   };
 
   const canCancel =
-    order &&
-    !["Pago confirmado", "En preparacion", "Despachado", "Entregado", "Cancelado", "Vencido"].includes(
-      order.status,
-    );
+    order?.canCancel === false
+      ? false
+      : Boolean(
+          order &&
+            ![
+              "Pago confirmado",
+              "En preparacion",
+              "Despachado",
+              "Entregado",
+              "Cancelado",
+              "Vencido",
+            ].includes(order.status),
+        );
 
   const cancelOrder = () => {
-    if (!order) {
+    if (!order || order?.canCancel === false) {
       return;
     }
 
     const updated = updateOrderStatus(order.number, "Cancelado");
+
     if (updated) {
       setOrder(updated);
     }
@@ -89,7 +121,7 @@ function TrackOrderPage() {
       <header className="section-title">
         <p>Seguimiento</p>
         <h1>Segui tu pedido</h1>
-        <span>Consulta estado de pago, preparacion y entrega con numero de pedido.</span>
+        <span>Consulta estado de pago, preparacion y entrega con tu numero de pedido.</span>
       </header>
 
       <form className="track-form" onSubmit={handleSearch}>
@@ -99,7 +131,7 @@ function TrackOrderPage() {
             type="text"
             value={orderNumber}
             onChange={(event) => setOrderNumber(event.target.value)}
-            placeholder="Ej: 000123"
+            placeholder="Ej: GRZ-ABC123 o 000123"
           />
         </label>
         <label>
@@ -111,8 +143,8 @@ function TrackOrderPage() {
             placeholder="Opcional para validar"
           />
         </label>
-        <button type="submit" className="btn-primary">
-          Consultar
+        <button type="submit" className="btn-primary" disabled={searching}>
+          {searching ? "Consultando..." : "Consultar"}
         </button>
       </form>
 
@@ -148,7 +180,7 @@ function TrackOrderPage() {
               ) : (
                 <>
                   <p>Retira: {order.delivery.pickupPerson}</p>
-                  <p>Franja: {order.delivery.pickupWindow || "A coordinar por WhatsApp"}</p>
+                  <p>Franja: {order.delivery.pickupWindow || "A coordinar"}</p>
                 </>
               )}
             </article>

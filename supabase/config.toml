@@ -35,7 +35,10 @@ enabled = true
 file_size_limit = "10MiB"
 
 [functions.create-payment-preference]
-verify_jwt = true
+verify_jwt = false
+
+[functions.get-order-tracking]
+verify_jwt = false
 
 [functions.mercadopago-webhook]
 verify_jwt = false

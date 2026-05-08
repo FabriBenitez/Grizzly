@@ -3,9 +3,9 @@ import { CircleHelp, Search, ShieldCheck, TimerReset, Wallet } from "lucide-reac
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
 import OrderStatusBadge from "../../components/ui/OrderStatusBadge";
+import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
-import { getOrders, updateOrderStatus } from "../../utils/orders";
-import { getOrdersSource, getPaymentStageOrders, updateOrderStatusInMemory } from "../../utils/admin";
+import { getPaymentStageOrders } from "../../utils/admin";
 
 function getActionTone(currentStatus, targetStatus) {
   if (
@@ -21,9 +21,7 @@ function getActionTone(currentStatus, targetStatus) {
 }
 
 function AdminPaymentsPage() {
-  const initialSource = useMemo(() => getOrdersSource(getOrders()), []);
-  const [orders, setOrders] = useState(initialSource.orders);
-  const [useDemoData] = useState(initialSource.useDemoData);
+  const { orders, useDemoData, loading, error, updateStatus } = useAdminOrdersData();
   const [search, setSearch] = useState("");
 
   const paymentOrders = useMemo(() => {
@@ -51,12 +49,7 @@ function AdminPaymentsPage() {
   }, [paymentOrders]);
 
   const changeStatus = (orderNumber, status) => {
-    if (useDemoData) {
-      setOrders((prev) => updateOrderStatusInMemory(prev, orderNumber, status));
-    } else {
-      updateOrderStatus(orderNumber, status);
-      setOrders(getOrders());
-    }
+    updateStatus(orderNumber, status);
   };
 
   return (
@@ -75,6 +68,9 @@ function AdminPaymentsPage() {
           Estas viendo ejemplos de pagos para visualizar el flujo completo de validacion manual.
         </section>
       )}
+
+      {loading && <section className="admin-demo-note">Cargando estados de pago reales...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-kpi-grid">
         <AdminStatCard

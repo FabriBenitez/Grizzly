@@ -307,6 +307,9 @@ export interface BaseDeDatos {
           external_reference: string | null;
           amount: number;
           status: "pending" | "approved" | "rejected" | "refunded";
+          payment_method: string | null;
+          approved_at: string | null;
+          rejected_at: string | null;
           payload: Json;
           created_at: string;
           updated_at: string;
@@ -320,6 +323,9 @@ export interface BaseDeDatos {
           external_reference?: string | null;
           amount: number;
           status?: "pending" | "approved" | "rejected" | "refunded";
+          payment_method?: string | null;
+          approved_at?: string | null;
+          rejected_at?: string | null;
           payload?: Json;
           created_at?: string;
           updated_at?: string;
@@ -331,6 +337,9 @@ export interface BaseDeDatos {
           external_reference?: string | null;
           amount?: number;
           status?: "pending" | "approved" | "rejected" | "refunded";
+          payment_method?: string | null;
+          approved_at?: string | null;
+          rejected_at?: string | null;
           payload?: Json;
           updated_at?: string;
         };

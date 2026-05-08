@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageCircle, Search } from "lucide-react";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import OrderStatusBadge from "../../components/ui/OrderStatusBadge";
+import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { ORDER_STATUSES } from "../../data/constants";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
-import { getOrders, updateOrderStatus } from "../../utils/orders";
-import { getOrdersSource, updateOrderStatusInMemory } from "../../utils/admin";
 import { buildWhatsAppLink } from "../../utils/whatsapp";
 
 function getOrderWhatsAppLink(order) {
@@ -16,9 +15,7 @@ function getOrderWhatsAppLink(order) {
 }
 
 function AdminOrdersPage() {
-  const initialSource = useMemo(() => getOrdersSource(getOrders()), []);
-  const [orders, setOrders] = useState(initialSource.orders);
-  const [useDemoData] = useState(initialSource.useDemoData);
+  const { orders, useDemoData, loading, error, updateStatus } = useAdminOrdersData();
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [selectedNumber, setSelectedNumber] = useState("");
@@ -49,12 +46,7 @@ function AdminOrdersPage() {
   }, [selectedNumber, visibleOrders]);
 
   const handleStatusChange = (orderNumber, nextStatus) => {
-    if (useDemoData) {
-      setOrders((prev) => updateOrderStatusInMemory(prev, orderNumber, nextStatus));
-    } else {
-      updateOrderStatus(orderNumber, nextStatus);
-      setOrders(getOrders());
-    }
+    updateStatus(orderNumber, nextStatus);
   };
 
   return (
@@ -74,6 +66,9 @@ function AdminOrdersPage() {
           automaticamente con tu operacion.
         </section>
       )}
+
+      {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card admin-table-card">
         <div className="admin-card-title">

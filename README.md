@@ -15,15 +15,31 @@ Build de produccion:
 npm run build
 ```
 
+## Variables de entorno
+
+Usa dos archivos separados para no mezclar variables publicas con secretos:
+
+- `/.env.local`
+  Variables del frontend, por ejemplo `VITE_SUPABASE_URL` y la clave publica de Supabase.
+- `/supabase/functions/.env.local`
+  Secrets server-side para Edge Functions, por ejemplo `SUPABASE_SERVICE_ROLE_KEY`,
+  `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET`.
+
+Ambos archivos estan ignorados por Git. Tienes una plantilla base en:
+
+- [`.env.example`](./.env.example)
+- [`supabase/functions/.env.local.example`](./supabase/functions/.env.local.example)
+
 ## Rutas cliente
 
 - `/` Inicio con hero de ofertas y productos.
 - `/catalogo` Catalogo con filtros (busqueda, categoria, marca y precio).
 - `/promos` Listado de productos en promocion.
 - `/producto/:slug` Detalle de producto con galeria y carrito.
-- `/checkout` Carrito + formulario + cierre por WhatsApp.
+- `/checkout` Carrito + formulario + creacion de pedido y pago.
+- `/checkout/resultado` Retorno del flujo de pago.
 - `/seguimiento` Seguimiento por numero de pedido.
-- `/cuenta` Login/registro y pedidos del cliente.
+- `/cuenta` Ayuda y acceso a seguimiento del pedido.
 
 ## Rutas admin (navbar separado)
 
@@ -36,13 +52,11 @@ npm run build
 - `/admin/stock` Movimientos de inventario.
 - `/admin/reportes` Metricas comerciales.
 
-## Persistencia local
+## Estado actual
 
-Se usa `localStorage` para:
+El proyecto esta en transicion de `localStorage` a Supabase:
 
-- carrito,
-- usuarios/sesion,
-- pedidos y estados,
-- movimientos de stock (demo).
-
-No hay backend integrado en esta version.
+- `localStorage` sigue usandose para carrito y algunos fallbacks demo.
+- `Supabase Auth` se usa para acceso admin.
+- `Supabase Edge Functions` y base de datos ya soportan el checkout con Mercado Pago,
+  tracking de pedidos y sincronizacion de pagos.

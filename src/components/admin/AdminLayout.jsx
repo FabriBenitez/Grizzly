@@ -3,6 +3,7 @@ import {
   Boxes,
   Image,
   LayoutDashboard,
+  LogOut,
   Menu,
   PackageCheck,
   Percent,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useAuthSupabase } from "../../shared/auth/AuthSupabaseProvider";
 import "../../admin.css";
 
 const adminNav = [
@@ -31,6 +33,7 @@ const adminNav = [
 
 function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { cerrarSesion, perfil, usuario } = useAuthSupabase();
 
   const today = useMemo(
     () =>
@@ -71,6 +74,18 @@ function AdminLayout() {
         </nav>
 
         <div className="admin-sidebar-footer">
+          <div className="admin-sidebar-session">
+            <strong>{perfil?.full_name || "Administrador"}</strong>
+            <small>{usuario?.email || "Sesion iniciada"}</small>
+          </div>
+          <button
+            type="button"
+            className="admin-logout-btn"
+            onClick={() => void cerrarSesion()}
+          >
+            <LogOut size={16} />
+            Cerrar sesion
+          </button>
           <NavLink to="/" className="back-store">
             <Store size={16} />
             Ir a tienda cliente

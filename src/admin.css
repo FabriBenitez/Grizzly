@@ -83,6 +83,44 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.admin-sidebar-session {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 248, 243, 0.92);
+}
+
+.admin-sidebar-session strong {
+  font-size: 0.95rem;
+}
+
+.admin-sidebar-session small {
+  color: rgba(255, 248, 243, 0.68);
+}
+
+.admin-logout-btn {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff8f3;
+  padding: 11px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.admin-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+
 .back-store {
   min-height: 42px;
   padding: 0 4px;
@@ -142,6 +180,107 @@
 
 .admin-content {
   padding: 28px 28px 48px;
+}
+
+.admin-auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(181, 72, 56, 0.2), transparent 34%),
+    linear-gradient(180deg, #201714 0%, #2b1e19 44%, #f3efec 44%, #f3efec 100%);
+}
+
+.admin-auth-card {
+  width: min(480px, 100%);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(106, 75, 63, 0.14);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 28px 70px rgba(25, 18, 16, 0.28);
+}
+
+.admin-auth-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0e4de;
+  color: #6a4b3f;
+}
+
+.admin-auth-kicker {
+  margin: 18px 0 0;
+  color: #8b6859;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.admin-auth-card h1 {
+  margin: 12px 0 10px;
+  color: #2b1e19;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  line-height: 1;
+}
+
+.admin-auth-copy {
+  margin: 0;
+  color: #5f514a;
+  line-height: 1.55;
+}
+
+.admin-auth-form {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-auth-form label {
+  display: grid;
+  gap: 8px;
+  color: #3b2b25;
+  font-weight: 700;
+}
+
+.admin-auth-form input {
+  width: 100%;
+  border: 1px solid #d7cbc3;
+  border-radius: 14px;
+  background: #fcfaf8;
+  padding: 13px 14px;
+  color: #2b1e19;
+}
+
+.admin-auth-form input:focus {
+  outline: none;
+  border-color: rgba(181, 72, 56, 0.56);
+  box-shadow: 0 0 0 4px rgba(181, 72, 56, 0.12);
+}
+
+.admin-auth-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.spin {
+  animation: admin-auth-spin 1s linear infinite;
+}
+
+@keyframes admin-auth-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-page-root {

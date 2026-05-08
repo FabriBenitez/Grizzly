@@ -753,3 +753,125 @@
   }
 }
 
+.checkout-result-card {
+  background: #ffffff;
+  border: 1px solid #e8e2d9;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 18px 40px rgba(139, 90, 43, 0.08);
+}
+
+.checkout-result-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.checkout-result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f5ece2;
+  color: #6f4a3f;
+}
+
+.checkout-result-approved .checkout-result-icon {
+  background: #ecf7f0;
+  color: #2d6b4a;
+}
+
+.checkout-result-pending .checkout-result-icon,
+.checkout-result-manual .checkout-result-icon {
+  background: #f8f2e8;
+  color: #8b5a2b;
+}
+
+.checkout-result-failed .checkout-result-icon {
+  background: #fff1ed;
+  color: #b94132;
+}
+
+.checkout-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.6rem;
+}
+
+.checkout-result-actions .btn-primary,
+.checkout-result-actions .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.checkout-result-loading {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: #f9f4ee;
+  color: #6d625c;
+  font-weight: 700;
+}
+
+.checkout-result-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.4rem;
+}
+
+.checkout-result-box {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid #ede0d4;
+  background: #fcf8f3;
+}
+
+.checkout-result-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #8b5a2b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.checkout-result-box strong {
+  display: block;
+  color: #1f1b18;
+  font-size: 1.15rem;
+}
+
+.checkout-result-box small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #756a63;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .checkout-result-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-result-hero {
+    flex-direction: column;
+  }
+}
+

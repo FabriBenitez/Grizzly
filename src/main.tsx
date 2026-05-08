@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
 import { AuthSupabaseProvider } from "./shared/auth/AuthSupabaseProvider";
 import "./shared/styles/globals.scss";
 import "./styles.css";
@@ -18,11 +17,9 @@ ReactDOM.createRoot(contenedorRaiz).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthSupabaseProvider>
-        <AuthProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
-        </AuthProvider>
+        <CartProvider>
+          <App />
+        </CartProvider>
       </AuthSupabaseProvider>
     </BrowserRouter>
   </React.StrictMode>,

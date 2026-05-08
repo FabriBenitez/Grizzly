@@ -14,15 +14,10 @@ import { Link } from "react-router-dom";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
 import OrderStatusBadge from "../../components/ui/OrderStatusBadge";
+import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { products } from "../../data/products";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
-import { getOrders } from "../../utils/orders";
-import {
-  ADMIN_WORKFLOW_STEPS,
-  getAdminMetrics,
-  getOrdersSource,
-  getTopProductsFromOrders,
-} from "../../utils/admin";
+import { ADMIN_WORKFLOW_STEPS, getAdminMetrics, getTopProductsFromOrders } from "../../utils/admin";
 
 const dashboardMetricConfig = [
   {
@@ -80,9 +75,7 @@ const dashboardMetricConfig = [
 ];
 
 function AdminOverviewPage() {
-  const realOrders = useMemo(() => getOrders(), []);
-  const { orders, useDemoData } = useMemo(() => getOrdersSource(realOrders), [realOrders]);
-
+  const { orders, useDemoData, loading, error } = useAdminOrdersData();
   const metrics = useMemo(() => getAdminMetrics(orders), [orders]);
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const topProducts = useMemo(() => getTopProductsFromOrders(orders, 5), [orders]);
@@ -113,6 +106,9 @@ function AdminOverviewPage() {
           Mostrando datos de ejemplo para que veas como quedaria el panel con pedidos reales.
         </section>
       )}
+
+      {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-kpi-grid">
         {dashboardMetricConfig.map((item) => (

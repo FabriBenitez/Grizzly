@@ -1,12 +1,13 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
-import AdminLayout from "./components/admin/AdminLayout";
+import AdminAccessGate from "./components/admin/AdminAccessGate";
 import HomePage from "./pages/HomePage";
 import CatalogPage from "./pages/CatalogPage";
 import ProductPage from "./pages/ProductPage";
 import AboutPage from "./pages/AboutPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import CheckoutResultPage from "./pages/CheckoutResultPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import AccountPage from "./pages/AccountPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -25,7 +26,7 @@ const AdminReportsPage = lazy(() => import("./pages/admin/AdminReportsPage"));
 function App() {
   return (
     <Routes>
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<AdminAccessGate />}>
         <Route index element={<AdminOverviewPage />} />
         <Route path="pedidos" element={<AdminOrdersPage />} />
         <Route path="pagos" element={<AdminPaymentsPage />} />
@@ -59,6 +60,7 @@ function App() {
         <Route path="/producto/:slug" element={<ProductPage />} />
         <Route path="/quienes-somos" element={<AboutPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/checkout/resultado" element={<CheckoutResultPage />} />
         <Route path="/seguimiento" element={<TrackOrderPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/inicio" element={<Navigate to="/" replace />} />

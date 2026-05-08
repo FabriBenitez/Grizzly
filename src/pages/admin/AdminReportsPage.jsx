@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -28,11 +28,11 @@ import {
 } from "lucide-react";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
+import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { ORDER_STATUSES } from "../../data/constants";
 import { products } from "../../data/products";
 import { formatCurrency } from "../../utils/currency";
-import { CONFIRMED_ORDER_STATUSES, getOrdersSource } from "../../utils/admin";
-import { getOrders } from "../../utils/orders";
+import { CONFIRMED_ORDER_STATUSES } from "../../utils/admin";
 
 const REPORT_STATUS_COLORS = {
   "Pendiente de pago": "#d1a35f",
@@ -867,7 +867,7 @@ function buildReportDocument({
 }
 
 function AdminReportsPage() {
-  const { useDemoData, orders } = useMemo(() => getOrdersSource(getOrders()), []);
+  const { orders, useDemoData, loading, error } = useAdminOrdersData();
   const baseOrders = useMemo(
     () => (useDemoData ? buildAdvancedReportOrders(orders, products) : orders),
     [orders, useDemoData],
@@ -891,6 +891,11 @@ function AdminReportsPage() {
 
   const [dateFrom, setDateFrom] = useState(rangeBounds.min);
   const [dateTo, setDateTo] = useState(rangeBounds.max);
+
+  useEffect(() => {
+    setDateFrom(rangeBounds.min);
+    setDateTo(rangeBounds.max);
+  }, [rangeBounds.max, rangeBounds.min]);
 
   const effectiveFrom = dateFrom || rangeBounds.min;
   const effectiveTo = dateTo || rangeBounds.max;
@@ -1046,6 +1051,9 @@ function AdminReportsPage() {
           presentacion mas formal para mostrar el sistema a un cliente real.
         </span>
       </header>
+
+      {loading && <section className="admin-demo-note">Cargando pedidos reales para reportes...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card admin-report-toolbar-card">
         <div className="admin-card-title">

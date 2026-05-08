@@ -13,7 +13,7 @@ function Footer() {
             <li><Link to="/catalogo">Productos</Link></li>
             <li><Link to="/quienes-somos">Quiénes somos</Link></li>
             <li><Link to="/seguimiento">Seguí tu pedido</Link></li>
-            <li><Link to="/cuenta">Mi cuenta</Link></li>
+            <li><Link to="/cuenta">Ayuda y pedidos</Link></li>
           </ul>
         </div>
 

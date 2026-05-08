@@ -2,10 +2,9 @@ import { useMemo, useState } from "react";
 import { Crown, MessageCircle, Search, Sparkles, Users } from "lucide-react";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
+import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { demoUsers } from "../../data/adminDemo";
 import { formatCurrency } from "../../utils/currency";
-import { getOrders } from "../../utils/orders";
-import { getOrdersSource } from "../../utils/admin";
 import { buildWhatsAppLink } from "../../utils/whatsapp";
 
 function readUsers() {
@@ -75,13 +74,15 @@ function getCustomerWhatsAppLink(customer) {
 }
 
 function AdminCustomersPage() {
-  const initialSource = useMemo(() => getOrdersSource(getOrders()), []);
-  const [orders] = useState(initialSource.orders);
-  const [useDemoData] = useState(initialSource.useDemoData);
-  const [users] = useState(() => {
+  const { orders, useDemoData, loading, error } = useAdminOrdersData();
+  const users = useMemo(() => {
     const realUsers = readUsers();
-    return realUsers.length ? realUsers : demoUsers;
-  });
+    if (realUsers.length) {
+      return realUsers;
+    }
+
+    return useDemoData ? demoUsers : [];
+  }, [useDemoData]);
   const [search, setSearch] = useState("");
 
   const customers = useMemo(() => aggregateCustomers(orders, users), [orders, users]);
@@ -133,6 +134,9 @@ function AdminCustomersPage() {
           Base de clientes de ejemplo cargada para mostrar como quedaria el CRM comercial.
         </section>
       )}
+
+      {loading && <section className="admin-demo-note">Cargando clientes desde pedidos reales...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-kpi-grid">
         <AdminStatCard
