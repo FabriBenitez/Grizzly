@@ -1,0 +1,171 @@
+.tarjeta-producto {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(33, 24, 20, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(0) scale(1);
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    border-color 0.28s ease,
+    opacity 0.5s ease;
+}
+
+.tarjeta-producto--oculta {
+  opacity: 0;
+  transform: translateY(26px) scale(0.975);
+}
+
+.tarjeta-producto--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: tarjeta-producto-revelar 0.72s cubic-bezier(0.2, 0.95, 0.2, 1) both;
+}
+
+.tarjeta-producto:hover {
+  transform: translateY(-5px);
+  border-color: rgba(182, 95, 76, 0.32);
+  box-shadow: 0 18px 32px rgba(33, 24, 20, 0.16);
+}
+
+.tarjeta-producto__enlace-imagen {
+  position: relative;
+  height: 180px;
+  background: #fcf9f6;
+  overflow: hidden;
+}
+
+.tarjeta-producto__imagen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  transition: transform 0.45s ease, filter 0.32s ease;
+}
+
+.tarjeta-producto:hover .tarjeta-producto__imagen {
+  transform: scale(1.06);
+  filter: saturate(1.03);
+}
+
+.tarjeta-producto__etiqueta {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: #bb4536;
+  color: var(--color-superficie);
+  font-size: 0.67rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 5px 8px;
+  z-index: 1;
+}
+
+.tarjeta-producto__cuerpo {
+  padding: 11px 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tarjeta-producto__nombre {
+  min-height: 42px;
+  font-weight: 700;
+  color: #2c2421;
+  font-size: 0.95rem;
+}
+
+.tarjeta-producto__valoracion {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4b4541;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+
+.tarjeta-producto__valoracion small {
+  color: var(--color-texto-tenue);
+}
+
+.tarjeta-producto__aviso-promocion {
+  color: var(--color-marca-principal);
+  font-weight: 800;
+}
+
+.tarjeta-producto__precios {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tarjeta-producto__precio-base {
+  color: #9b928d;
+  text-decoration: line-through;
+  font-weight: 600;
+}
+
+.tarjeta-producto__precio-final {
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--color-exito);
+}
+
+.tarjeta-producto__precio-transferencia {
+  color: #4bb53f;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.tarjeta-producto--compacta .tarjeta-producto__enlace-imagen {
+  height: 160px;
+}
+
+@keyframes tarjeta-producto-revelar {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.975);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 560px) {
+  .tarjeta-producto__cuerpo {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .tarjeta-producto--compacta .tarjeta-producto__enlace-imagen {
+    height: 132px;
+  }
+
+  .tarjeta-producto__nombre {
+    min-height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .tarjeta-producto__valoracion {
+    gap: 4px;
+    font-size: 0.76rem;
+  }
+
+  .tarjeta-producto__aviso-promocion {
+    font-size: 0.7rem;
+  }
+
+  .tarjeta-producto__precio-final {
+    font-size: 1.12rem;
+  }
+
+  .tarjeta-producto__precio-transferencia {
+    font-size: 0.8rem;
+    line-height: 1.12;
+  }
+}
