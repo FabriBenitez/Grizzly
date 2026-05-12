@@ -344,6 +344,57 @@ export interface BaseDeDatos {
           updated_at?: string;
         };
       };
+      email_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          order_id: string | null;
+          payment_id: string | null;
+          template_key: string;
+          provider: string;
+          to_email: string;
+          subject: string;
+          status: "pending" | "sent" | "failed";
+          provider_message_id: string | null;
+          payload: Json;
+          error_message: string | null;
+          sent_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          order_id?: string | null;
+          payment_id?: string | null;
+          template_key: string;
+          provider?: string;
+          to_email: string;
+          subject: string;
+          status?: "pending" | "sent" | "failed";
+          provider_message_id?: string | null;
+          payload?: Json;
+          error_message?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string | null;
+          order_id?: string | null;
+          payment_id?: string | null;
+          template_key?: string;
+          provider?: string;
+          to_email?: string;
+          subject?: string;
+          status?: "pending" | "sent" | "failed";
+          provider_message_id?: string | null;
+          payload?: Json;
+          error_message?: string | null;
+          sent_at?: string | null;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

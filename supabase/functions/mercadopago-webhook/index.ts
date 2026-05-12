@@ -1,4 +1,5 @@
 import { cabecerasCors } from "../_shared/cors.ts";
+import { invocarFuncionInterna } from "../_shared/internalFunctions.ts";
 import { crearClienteAdminSupabase } from "../_shared/supabaseAdmin.ts";
 
 const PAYMENT_STATUS_MAP = {
@@ -127,6 +128,15 @@ async function fetchMercadoPagoPayment(paymentId: string) {
   }
 
   return data as Record<string, unknown>;
+}
+
+async function enviarEmailPagoAprobado(orderNumber: string) {
+  await invocarFuncionInterna("send-order-email", {
+    templateKey: "payment_approved",
+    orderNumber,
+  }).catch((error) => {
+    console.error("No pudimos enviar el email de pago aprobado.", error);
+  });
 }
 
 Deno.serve(async (request) => {
@@ -264,15 +274,23 @@ Deno.serve(async (request) => {
     }
 
     if (normalizeText(orderRow.status) !== nextOrderStatus) {
-      await supabase
-        .from("order_status_history")
-        .insert({
-          order_id: orderRow.id,
-          previous_status: orderRow.status,
-          new_status: nextOrderStatus,
-          note: `Actualizacion automatica desde webhook Mercado Pago (${normalizeText(body.action) || "payment.updated"}).`,
-        })
-        .catch(() => undefined);
+      const { error: historyError } = await supabase.from("order_status_history").insert({
+        order_id: orderRow.id,
+        previous_status: orderRow.status,
+        new_status: nextOrderStatus,
+        note: `Actualizacion automatica desde webhook Mercado Pago (${normalizeText(body.action) || "payment.updated"}).`,
+      });
+
+      if (historyError) {
+        console.error("No pudimos registrar el cambio de estado del pedido.", historyError);
+      }
+    }
+
+    if (
+      internalPaymentStatus === "approved" &&
+      normalizeText(orderRow.payment_status) !== "approved"
+    ) {
+      await enviarEmailPagoAprobado(orderRow.order_number);
     }
 
     return jsonResponse({

@@ -5,7 +5,7 @@ import {
   products as baseProducts,
 } from "../data/products";
 
-export const CATALOG_PRODUCTS_STORAGE_KEY = "grizzly_catalog_products";
+export const CATALOG_PRODUCTS_STORAGE_KEY = "grizzly_catalog_products_mp_test_v1";
 export const CATALOG_PRODUCTS_EVENT = "grizzly:catalog-products-updated";
 
 function normalizeCatalogProduct(product, index, fallback = {}) {

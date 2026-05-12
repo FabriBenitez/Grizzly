@@ -5,7 +5,7 @@ import { getEffectivePrice } from "../utils/catalog";
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useLocalStorage("grizzly_cart", []);
+  const [items, setItems] = useLocalStorage("grizzly_cart_mp_test_v1", []);
 
   const addToCart = (product, quantity = 1) => {
     if (quantity <= 0) {
@@ -67,7 +67,7 @@ export function CartProvider({ children }) {
     const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const total = items.reduce((acc, item) => acc + getEffectivePrice(item) * item.quantity, 0);
     const discount = subtotal - total;
-    const shipping = total >= 120000 || total === 0 ? 0 : 3000;
+    const shipping = total >= 50 || total === 0 ? 0 : 10;
     const grandTotal = total + shipping;
     const count = items.reduce((acc, item) => acc + item.quantity, 0);
 

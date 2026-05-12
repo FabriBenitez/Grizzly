@@ -16,10 +16,20 @@ export function estanVariablesPublicasSupabaseConfiguradas() {
   return Boolean(leerVariablePublica("VITE_SUPABASE_URL") && obtenerClavePublicaSupabase());
 }
 
+export function obtenerClaveAnonSupabase() {
+  return leerVariablePublica("VITE_SUPABASE_ANON_KEY");
+}
+
+export function obtenerClavePublicableSupabase() {
+  return leerVariablePublica("VITE_SUPABASE_PUBLISHABLE_KEY");
+}
+
 function obtenerClavePublicaSupabase() {
   return (
-    leerVariablePublica("VITE_SUPABASE_PUBLISHABLE_KEY") ||
-    leerVariablePublica("VITE_SUPABASE_ANON_KEY")
+    // Preferimos la anon key JWT cuando existe para maximizar compatibilidad
+    // con Edge Functions publicas en proyectos que todavia tengan verificacion JWT habilitada.
+    obtenerClaveAnonSupabase() ||
+    obtenerClavePublicableSupabase()
   );
 }
 

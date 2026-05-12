@@ -1,41 +1,19 @@
 import { useMemo, useState } from "react";
 import { AlertCircle, Boxes, PackageCheck, TriangleAlert } from "lucide-react";
 import AdminStatCard from "../../components/admin/AdminStatCard";
-import { products } from "../../data/products";
-
-const STOCK_THRESHOLD_KEY = "grizzly_low_stock_threshold";
-
-function readThreshold() {
-  try {
-    const raw = window.localStorage.getItem(STOCK_THRESHOLD_KEY);
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 12;
-  } catch {
-    return 12;
-  }
-}
-
-function writeThreshold(value) {
-  window.localStorage.setItem(STOCK_THRESHOLD_KEY, String(value));
-}
-
-function getStockLevel(stock, threshold) {
-  if (stock <= Math.max(1, Math.floor(threshold / 2))) {
-    return "critico";
-  }
-  if (stock <= threshold) {
-    return "bajo";
-  }
-  return "ok";
-}
-
-function getStockPercent(stock, threshold) {
-  const safeCap = Math.max(threshold * 2, 1);
-  return Math.min(100, Math.max(6, Math.round((stock / safeCap) * 100)));
-}
+import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
+import {
+  getStockLevel,
+  getStockPercent,
+  readStockThreshold,
+  writeStockThreshold,
+} from "../../utils/stock";
 
 function AdminStockPage() {
-  const [threshold, setThreshold] = useState(readThreshold());
+  const { products, setProducts, useDemoData, loading, saving, error, saveProducts } =
+    useAdminCatalogData();
+  const [threshold, setThreshold] = useState(readStockThreshold());
+  const [message, setMessage] = useState("");
 
   const rows = useMemo(
     () =>
@@ -46,7 +24,7 @@ function AdminStockPage() {
           percent: getStockPercent(product.stock, threshold),
         }))
         .sort((a, b) => a.stock - b.stock),
-    [threshold],
+    [products, threshold],
   );
 
   const summary = useMemo(() => {
@@ -60,7 +38,32 @@ function AdminStockPage() {
     event.preventDefault();
     const safe = Math.max(1, Number(threshold || 1));
     setThreshold(safe);
-    writeThreshold(safe);
+    writeStockThreshold(safe);
+    setMessage("Umbral global de stock actualizado.");
+  };
+
+  const updateStock = (productId, nextValue) => {
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === productId
+          ? { ...product, stock: Math.max(0, Number(nextValue || 0)) }
+          : product,
+      ),
+    );
+    setMessage("");
+  };
+
+  const saveInventory = async () => {
+    try {
+      await saveProducts(products);
+      setMessage(
+        useDemoData
+          ? "Inventario sincronizado con Supabase usando la base actual."
+          : "Stock guardado correctamente.",
+      );
+    } catch {
+      setMessage("Actualizamos el stock en pantalla, pero no pudimos persistirlo todavia.");
+    }
   };
 
   return (
@@ -69,9 +72,19 @@ function AdminStockPage() {
         <p>Stock</p>
         <h1>Definicion de stock bajo global</h1>
         <span>
-          Configura un unico umbral para todos los productos y detecta rapidamente niveles criticos.
+          Configura un unico umbral para todos los productos y actualiza el inventario real desde
+          un solo lugar.
         </span>
       </header>
+
+      {useDemoData && !loading && (
+        <section className="admin-demo-note">
+          Mostrando stock desde el fallback local. Al guardar, este inventario se publica en
+          Supabase y queda como base real del panel.
+        </section>
+      )}
+      {loading && <section className="admin-demo-note">Cargando stock real...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card">
         <div className="admin-card-title">
@@ -96,6 +109,7 @@ function AdminStockPage() {
           Regla actual: stock <b>{"<="}</b> {threshold} se marca como bajo. Stock <b>{"<="}</b>{" "}
           {Math.max(1, Math.floor(threshold / 2))} se marca como critico.
         </p>
+        {message && <p className="admin-message">{message}</p>}
       </section>
 
       <section className="admin-kpi-grid">
@@ -134,6 +148,9 @@ function AdminStockPage() {
             <span className="admin-card-kicker">Inventario actual</span>
             <h2>Estado de inventario por producto</h2>
           </div>
+          <button type="button" onClick={saveInventory} disabled={saving || loading}>
+            {saving ? "Guardando..." : "Guardar stock"}
+          </button>
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table admin-stock-table">
@@ -161,7 +178,15 @@ function AdminStockPage() {
                   <td>{product.category}</td>
                   <td>
                     <div className="stock-level-cell">
-                      <b>{product.stock} u.</b>
+                      <label className="products-table-input-shell unit">
+                        <span>u</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={product.stock}
+                          onChange={(event) => updateStock(product.id, event.target.value)}
+                        />
+                      </label>
                       <span>
                         <i className={product.level} style={{ width: `${product.percent}%` }} />
                       </span>

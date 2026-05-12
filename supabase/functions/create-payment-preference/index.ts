@@ -1,5 +1,6 @@
 import { cabecerasCors } from "../_shared/cors.ts";
 import { leerSecreto } from "../_shared/env.ts";
+import { invocarFuncionInterna } from "../_shared/internalFunctions.ts";
 import { crearClienteAdminSupabase } from "../_shared/supabaseAdmin.ts";
 
 const PAYMENT_METHODS = {
@@ -135,6 +136,34 @@ function splitFullName(fullName: string) {
 
 function mapShippingType(type: string) {
   return type === "pickup" || type === "retiro" ? "pickup" : "delivery";
+}
+
+function resolvePublicAppUrl(request: Request) {
+  const candidates = [
+    Deno.env.get("APP_URL")?.trim() || "",
+    request.headers.get("origin")?.trim() || "",
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = new URL(candidate);
+      const hostname = parsed.hostname.toLowerCase();
+      const isHttps = parsed.protocol === "https:";
+      const isLocalHost =
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "0.0.0.0" ||
+        hostname.endsWith(".local");
+
+      if (isHttps && !isLocalHost) {
+        return parsed.toString().replace(/\/$/, "");
+      }
+    } catch {
+      // Ignoramos valores invalidos y seguimos con el siguiente candidato.
+    }
+  }
+
+  return "";
 }
 
 function buildShippingAddress(delivery: CheckoutPayload["delivery"]) {
@@ -315,11 +344,11 @@ async function createMercadoPagoPreference({
   paymentMethod: string;
 }) {
   const accessToken = leerSecreto("MERCADOPAGO_ACCESS_TOKEN");
-  const appUrl = Deno.env.get("APP_URL")?.trim() || request.headers.get("origin") || "http://localhost:5173";
+  const appUrl = resolvePublicAppUrl(request);
   const webhookUrl = `${leerSecreto("SUPABASE_URL").replace(/\/$/, "")}/functions/v1/mercadopago-webhook`;
   const { name, surname } = splitFullName(order.customerName);
 
-  const preferencePayload = {
+  const preferencePayload: Record<string, unknown> = {
     items: buildMercadoPagoItems(order),
     payer: {
       name,
@@ -334,13 +363,7 @@ async function createMercadoPagoPreference({
       },
     },
     shipments: buildMercadoPagoShipments(order),
-    back_urls: {
-      success: `${appUrl.replace(/\/$/, "")}/checkout/resultado`,
-      failure: `${appUrl.replace(/\/$/, "")}/checkout/resultado`,
-      pending: `${appUrl.replace(/\/$/, "")}/checkout/resultado`,
-    },
     notification_url: webhookUrl,
-    auto_return: "approved",
     statement_descriptor: "GRIZZLY",
     external_reference: order.orderNumber,
     additional_info: `Pedido ${order.orderNumber} - ${paymentMethod}`,
@@ -349,6 +372,15 @@ async function createMercadoPagoPreference({
       order_number: order.orderNumber,
     },
   };
+
+  if (appUrl) {
+    preferencePayload.back_urls = {
+      success: `${appUrl}/checkout/resultado`,
+      failure: `${appUrl}/checkout/resultado`,
+      pending: `${appUrl}/checkout/resultado`,
+    };
+    preferencePayload.auto_return = "approved";
+  }
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
@@ -438,15 +470,16 @@ async function createNewOrder(payload: CheckoutPayload) {
     throw new Error(paymentError.message || "No pudimos crear el registro de pago.");
   }
 
-  await supabase
-    .from("order_status_history")
-    .insert({
-      order_id: orderRow.id,
-      previous_status: null,
-      new_status: "pending",
-      note: "Pedido creado desde checkout web.",
-    })
-    .catch(() => undefined);
+  const { error: historyError } = await supabase.from("order_status_history").insert({
+    order_id: orderRow.id,
+    previous_status: null,
+    new_status: "pending",
+    note: "Pedido creado desde checkout web.",
+  });
+
+  if (historyError) {
+    console.error("No pudimos registrar el historial inicial del pedido.", historyError);
+  }
 
   return normalizeExistingOrder({
     ...orderRow,
@@ -493,6 +526,15 @@ async function syncPaymentPreference(orderId: string, preference: Record<string,
   }
 }
 
+async function enviarEmailPedidoCreado(orderNumber: string) {
+  await invocarFuncionInterna("send-order-email", {
+    templateKey: "order_confirmation",
+    orderNumber,
+  }).catch((error) => {
+    console.error("No pudimos enviar el email de confirmacion de pedido.", error);
+  });
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: cabecerasCors });
@@ -508,6 +550,7 @@ Deno.serve(async (request) => {
     const requestedPaymentMethod =
       normalizeText(payload.paymentMethod).toLowerCase() || PAYMENT_METHODS.mercadoPago;
 
+    const creatingNewOrder = requestedOrderNumber.length === 0;
     let order =
       requestedOrderNumber.length > 0
         ? await getExistingOrder(requestedOrderNumber)
@@ -515,6 +558,10 @@ Deno.serve(async (request) => {
             ...payload,
             paymentMethod: requestedPaymentMethod,
           });
+
+    if (creatingNewOrder) {
+      await enviarEmailPedidoCreado(order.orderNumber);
+    }
 
     if (order.paymentStatus === "approved") {
       return jsonResponse(

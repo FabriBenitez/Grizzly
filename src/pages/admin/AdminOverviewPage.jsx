@@ -14,10 +14,11 @@ import { Link } from "react-router-dom";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
 import OrderStatusBadge from "../../components/ui/OrderStatusBadge";
+import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
 import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
-import { products } from "../../data/products";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
 import { ADMIN_WORKFLOW_STEPS, getAdminMetrics, getTopProductsFromOrders } from "../../utils/admin";
+import { readStockThreshold } from "../../utils/stock";
 
 const dashboardMetricConfig = [
   {
@@ -76,14 +77,19 @@ const dashboardMetricConfig = [
 
 function AdminOverviewPage() {
   const { orders, useDemoData, loading, error } = useAdminOrdersData();
+  const {
+    products: catalogProducts,
+    useDemoData: useDemoCatalogData,
+    loading: loadingCatalog,
+    error: catalogError,
+  } = useAdminCatalogData();
   const metrics = useMemo(() => getAdminMetrics(orders), [orders]);
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const topProducts = useMemo(() => getTopProductsFromOrders(orders, 5), [orders]);
+  const stockThreshold = useMemo(() => readStockThreshold(), []);
   const lowStockProducts = useMemo(() => {
-    const savedThreshold = Number(window.localStorage.getItem("grizzly_low_stock_threshold"));
-    const threshold = Number.isFinite(savedThreshold) && savedThreshold > 0 ? savedThreshold : 12;
-    return products.filter((product) => product.stock <= threshold);
-  }, []);
+    return catalogProducts.filter((product) => product.stock <= stockThreshold);
+  }, [catalogProducts, stockThreshold]);
 
   return (
     <div className="admin-page-root">
@@ -217,6 +223,14 @@ function AdminOverviewPage() {
           </div>
           <Link to="/admin/stock">Configurar umbral global</Link>
         </div>
+        {useDemoCatalogData && !loadingCatalog && (
+          <p className="admin-threshold-help">
+            Inventario mostrado desde el fallback local hasta terminar de publicar el catalogo en
+            Supabase.
+          </p>
+        )}
+        {loadingCatalog && <p className="admin-threshold-help">Cargando inventario real...</p>}
+        {!loadingCatalog && catalogError && <p className="admin-threshold-help">{catalogError}</p>}
         {!lowStockProducts.length ? (
           <AdminEmptyState
             compact

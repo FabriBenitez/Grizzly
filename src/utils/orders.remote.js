@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { PublicEdgeFunctionError, invokePublicEdgeFunction } from "../lib/edgeFunctions.public";
 import { normalizeOrderRecord } from "./orders";
 
 const ORDER_SELECT = `
@@ -130,6 +131,17 @@ function mapPaymentMethodToLabel(method) {
   }
 
   return normalizeText(method) || "Sin definir";
+}
+
+async function sendOrderEmailNotification(payload) {
+  const client = requireSupabase();
+  const { error } = await client.functions.invoke("send-order-email", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message || "No pudimos enviar el email asociado al pedido.");
+  }
 }
 
 function mapDbStatusToUiStatus(orderRow, payment) {
@@ -337,41 +349,75 @@ export async function updateRemoteOrderStatus(order, nextStatus) {
       { onConflict: "order_id" },
     );
   }
+
+  const orderNumber = normalizeText(order?.number);
+
+  if (orderNumber && nextStatus !== "Pendiente de pago") {
+    const emailPayload =
+      nextStatus === "Pago confirmado"
+        ? {
+            templateKey: "payment_approved",
+            orderNumber,
+          }
+        : {
+            templateKey: "order_status_changed",
+            orderNumber,
+            statusLabel: nextStatus,
+          };
+
+    await sendOrderEmailNotification(emailPayload).catch((error) => {
+      console.error("No pudimos enviar el email de cambio de estado.", error);
+    });
+  }
 }
 
 export async function createCheckoutPayment(payload) {
-  const client = requireSupabase();
-  const { data, error } = await client.functions.invoke("create-payment-preference", {
-    body: payload,
-  });
+  try {
+    const data = await invokePublicEdgeFunction("create-payment-preference", payload);
 
-  if (error) {
+    if (!data?.ok) {
+      throw new Error(data?.error || "No pudimos generar el pedido.");
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof PublicEdgeFunctionError && error.status === 401) {
+      throw new Error(
+        "La funcion create-payment-preference respondio 401. Revisa que este desplegada como publica (verify_jwt = false) o configura VITE_SUPABASE_ANON_KEY para usar una clave JWT compatible.",
+      );
+    }
+
+    if (error instanceof PublicEdgeFunctionError && error.body?.error) {
+      throw new Error(String(error.body.error) || "No pudimos iniciar el proceso de pago.");
+    }
+
     throw new Error(error.message || "No pudimos iniciar el proceso de pago.");
   }
-
-  if (!data?.ok) {
-    throw new Error(data?.error || "No pudimos generar el pedido.");
-  }
-
-  return data;
 }
 
 export async function fetchPublicOrderTracking(orderNumber, phone = "") {
-  const client = requireSupabase();
-  const { data, error } = await client.functions.invoke("get-order-tracking", {
-    body: {
+  try {
+    const data = await invokePublicEdgeFunction("get-order-tracking", {
       orderNumber,
       phone,
-    },
-  });
+    });
 
-  if (error) {
+    if (!data?.ok || !data?.order) {
+      throw new Error(data?.error || "No encontramos el pedido solicitado.");
+    }
+
+    return data.order;
+  } catch (error) {
+    if (error instanceof PublicEdgeFunctionError && error.status === 401) {
+      throw new Error(
+        "La funcion get-order-tracking respondio 401. Revisa que este desplegada como publica (verify_jwt = false) o configura VITE_SUPABASE_ANON_KEY para usar una clave JWT compatible.",
+      );
+    }
+
+    if (error instanceof PublicEdgeFunctionError && error.body?.error) {
+      throw new Error(String(error.body.error) || "No pudimos consultar el pedido.");
+    }
+
     throw new Error(error.message || "No pudimos consultar el pedido.");
   }
-
-  if (!data?.ok || !data?.order) {
-    throw new Error(data?.error || "No encontramos el pedido solicitado.");
-  }
-
-  return data.order;
 }

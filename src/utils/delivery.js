@@ -1,21 +1,20 @@
 /**
  * Calcula la distancia aproximada desde Burzaco.
- * En una fase real, esto consultaría Google Matrix API o similar.
+ * En una fase real, esto consultaria Google Matrix API o similar.
  */
 export const calcularDistanciaDesdeBurzaco = async (direccion, localidad, cp) => {
-  // MOCK LOGIC: Si el CP empieza con "18" (Zona Sur cercana), simulamos que está cerca.
-  // Si el CP es "1852" (Burzaco), distancia 0.
+  // Mock simple para pruebas locales de checkout.
   return new Promise((resolve) => {
     setTimeout(() => {
       if (cp === "1852") resolve(0);
-      if (cp.startsWith("18")) resolve(8); // Dentro de los 10km
-      resolve(25); // Fuera de los 10km
+      if (cp.startsWith("18")) resolve(8);
+      resolve(25);
     }, 600);
   });
 };
 
 /**
- * Determina el tipo de envío basado en la distancia.
+ * Determina el tipo de envio basado en la distancia.
  * Punto base: Burzaco. Radio: 10km.
  */
 export const determinarTipoEnvioPorDireccion = async (datos) => {
@@ -23,8 +22,8 @@ export const determinarTipoEnvioPorDireccion = async (datos) => {
   if (!address || !locality || !postalCode) return null;
 
   const distancia = await calcularDistanciaDesdeBurzaco(address, locality, postalCode);
-  
-  return distancia <= 10 
-    ? { type: 'moto', label: 'Moto mensajería', cost: 3500 }
-    : { type: 'correo', label: 'Correo Argentino a sucursal', cost: 5500 };
+
+  return distancia <= 10
+    ? { type: "moto", label: "Moto mensajeria", cost: 10 }
+    : { type: "correo", label: "Correo Argentino a sucursal", cost: 20 };
 };

@@ -30,7 +30,7 @@ const PAYMENT_METHODS = [
   },
 ];
 
-const FREE_SHIPPING_THRESHOLD = 120000;
+const FREE_SHIPPING_THRESHOLD = 50;
 const LAST_ORDER_STORAGE_KEY = "grizzly_last_order";
 
 function FreeShippingProgress({ currentAmount }) {

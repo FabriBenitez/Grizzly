@@ -8,8 +8,8 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
 import { formatCurrency } from "../../utils/currency";
-import { readCatalogProducts, saveCatalogProducts } from "../../utils/catalogStore";
 
 const excelColumns = [
   "SKU",
@@ -55,8 +55,11 @@ function moveItem(array, fromIndex, toIndex) {
   return next;
 }
 
+const FALLBACK_PRODUCT_IMAGE = "/assets/products/creatina-300-bag.jpg";
+
 function AdminProductsPage() {
-  const [products, setProducts] = useState(() => readCatalogProducts());
+  const { products, setProducts, useDemoData, loading, saving, error, saveProducts, uploadImages } =
+    useAdminCatalogData();
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState({
     sku: "",
@@ -71,15 +74,9 @@ function AdminProductsPage() {
   const [message, setMessage] = useState("");
   const [excelFileName, setExcelFileName] = useState("");
   const [excelMessage, setExcelMessage] = useState("");
-  const [selectedProductId, setSelectedProductId] = useState(
-    () => readCatalogProducts()[0]?.id || "",
-  );
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [galleryUrl, setGalleryUrl] = useState("");
   const [galleryMessage, setGalleryMessage] = useState("");
-
-  useEffect(() => {
-    saveCatalogProducts(products);
-  }, [products]);
 
   useEffect(() => {
     if (!products.some((product) => product.id === selectedProductId)) {
@@ -95,10 +92,10 @@ function AdminProductsPage() {
 
     return products.filter(
       (product) =>
-        product.name.toLowerCase().includes(term) ||
-        product.brand.toLowerCase().includes(term) ||
-        product.category.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term),
+        (product.name || "").toLowerCase().includes(term) ||
+        (product.brand || "").toLowerCase().includes(term) ||
+        (product.category || "").toLowerCase().includes(term) ||
+        (product.sku || "").toLowerCase().includes(term),
     );
   }, [products, query]);
 
@@ -110,26 +107,36 @@ function AdminProductsPage() {
       prev.map((product) => (product.id === id ? { ...product, [key]: value } : product)),
     );
     setMessage("");
+    setGalleryMessage("");
   };
 
-  const saveChanges = () => {
-    setMessage("Cambios de productos guardados en modo demo (frontend).");
+  const saveChanges = async () => {
+    try {
+      await saveProducts(products);
+      setMessage(
+        useDemoData
+          ? "Catalogo sincronizado con Supabase usando el fallback actual como base."
+          : "Cambios de productos guardados correctamente.",
+      );
+    } catch {
+      setMessage("Guardamos los cambios en pantalla, pero no pudimos persistirlos todavia.");
+    }
   };
 
-  const createProduct = (event) => {
+  const createProduct = async (event) => {
     event.preventDefault();
     if (!draft.sku.trim() || !draft.name.trim() || !draft.category.trim() || !draft.brand.trim()) {
-      setMessage("Completa SKU, nombre, categoria y marca para crear el producto demo.");
+      setMessage("Completa SKU, nombre, categoria y marca para crear el producto.");
       return;
     }
 
     const id = `demo_${Date.now()}`;
-    const image = "/assets/products/creatina-300-bag.jpg";
-
-    setProducts((prev) => [
+    const image = FALLBACK_PRODUCT_IMAGE;
+    const nextSku = draft.sku.trim();
+    const nextProducts = [
       {
         id,
-        sku: draft.sku.trim(),
+        sku: nextSku,
         slug: `${draft.name.toLowerCase().replace(/\s+/g, "-")}-${id}`,
         name: draft.name.trim(),
         brand: draft.brand.trim(),
@@ -149,12 +156,13 @@ function AdminProductsPage() {
         highlighted: false,
         image,
         gallery: [image],
-        description: draft.description.trim() || "Producto demo creado desde el panel admin.",
+        description: draft.description.trim() || "Producto creado desde el panel admin.",
       },
-      ...prev,
-    ]);
-    setSelectedProductId(id);
+      ...products,
+    ];
 
+    setProducts(nextProducts);
+    setSelectedProductId(id);
     setDraft({
       sku: "",
       name: "",
@@ -165,7 +173,15 @@ function AdminProductsPage() {
       stock: "",
       description: "",
     });
-    setMessage("Producto demo creado correctamente.");
+
+    try {
+      const saved = await saveProducts(nextProducts);
+      const savedProduct = saved.find((product) => product.sku === nextSku);
+      setSelectedProductId(savedProduct?.id || saved[0]?.id || id);
+      setMessage("Producto creado y guardado correctamente.");
+    } catch {
+      setMessage("Producto creado en pantalla. Falta persistirlo en la base.");
+    }
   };
 
   const handleExcelFileChange = (event) => {
@@ -176,7 +192,7 @@ function AdminProductsPage() {
 
     setExcelFileName(file.name);
     setExcelMessage(
-      "Vista lista: el siguiente paso seria parsear el Excel, validar columnas y crear solo productos nuevos.",
+      "Vista lista: el siguiente paso es parsear el Excel, validar columnas y crear solo productos nuevos sobre Supabase.",
     );
   };
 
@@ -197,16 +213,25 @@ function AdminProductsPage() {
     );
   };
 
-  const handleGalleryFiles = (event) => {
+  const handleGalleryFiles = async (event) => {
     const files = [...(event.target.files || [])];
     if (!files.length || !selectedProduct) {
       return;
     }
 
-    const imageUrls = files.map((file) => URL.createObjectURL(file));
-    appendImagesToProduct(selectedProduct.id, imageUrls);
-    setGalleryMessage(`${files.length} imagenes agregadas a la galeria en modo demo.`);
-    event.target.value = "";
+    try {
+      const imageUrls = await uploadImages(files, selectedProduct.name);
+      appendImagesToProduct(selectedProduct.id, imageUrls);
+      setGalleryMessage(
+        useDemoData
+          ? `${files.length} imagenes agregadas al borrador local del producto.`
+          : `${files.length} imagenes subidas y listas para guardar en la galeria.`,
+      );
+    } catch {
+      setGalleryMessage("No pudimos subir las imagenes del producto.");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const addGalleryUrl = () => {
@@ -216,7 +241,7 @@ function AdminProductsPage() {
 
     appendImagesToProduct(selectedProduct.id, [galleryUrl.trim()]);
     setGalleryUrl("");
-    setGalleryMessage("Imagen agregada a la galeria del producto.");
+    setGalleryMessage("Imagen agregada. Guarda cambios para persistir la galeria.");
   };
 
   const removeGalleryImage = (imageIndex) => {
@@ -231,14 +256,15 @@ function AdminProductsPage() {
         }
 
         const nextGallery = product.gallery.filter((_, index) => index !== imageIndex);
+        const nextImage = nextGallery[0] || FALLBACK_PRODUCT_IMAGE;
         return {
           ...product,
-          image: nextGallery[0] || product.image,
-          gallery: nextGallery.length ? nextGallery : [product.image],
+          image: nextImage,
+          gallery: nextGallery.length ? nextGallery : [nextImage],
         };
       }),
     );
-    setGalleryMessage("Imagen quitada de la galeria.");
+    setGalleryMessage("Imagen quitada. Guarda cambios para actualizar la galeria real.");
   };
 
   const moveGalleryImage = (imageIndex, direction) => {
@@ -265,7 +291,7 @@ function AdminProductsPage() {
         };
       }),
     );
-    setGalleryMessage("Orden de galeria actualizado.");
+    setGalleryMessage("Orden actualizado. Guarda cambios para aplicar la nueva galeria.");
   };
 
   return (
@@ -289,6 +315,15 @@ function AdminProductsPage() {
           </span>
         </div>
       </header>
+
+      {useDemoData && !loading && (
+        <section className="admin-demo-note">
+          Mostrando el fallback local del catalogo. Al guardar, este mismo contenido se publica en
+          Supabase y pasa a ser la base real del panel.
+        </section>
+      )}
+      {loading && <section className="admin-demo-note">Cargando catalogo real...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card products-highlight-card">
         <div className="products-section-head compact">
@@ -403,8 +438,8 @@ function AdminProductsPage() {
           <p className="products-toolbar-status">
             {visibleProducts.length} productos visibles de {products.length}
           </p>
-          <button type="button" onClick={saveChanges}>
-            Guardar cambios
+          <button type="button" onClick={saveChanges} disabled={saving || loading}>
+            {saving ? "Guardando..." : "Guardar cambios"}
           </button>
         </div>
 
@@ -521,7 +556,7 @@ function AdminProductsPage() {
             </div>
           </div>
           <p className="products-helper-copy">
-            Crea productos demo en segundos para completar el catalogo y seguir operando.
+            Crea productos en segundos para completar el catalogo y publicarlos directamente.
           </p>
           <form
             className="admin-inline-form product-inline-form products-create-form"
@@ -578,7 +613,9 @@ function AdminProductsPage() {
                 setDraft((prev) => ({ ...prev, description: event.target.value }))
               }
             />
-            <button type="submit">Crear producto</button>
+            <button type="submit" disabled={saving || loading}>
+              {saving ? "Guardando..." : "Crear producto"}
+            </button>
           </form>
           {message && <p className="admin-message">{message}</p>}
         </article>
@@ -609,8 +646,14 @@ function AdminProductsPage() {
             </select>
             <label className="products-gallery-upload">
               <Upload size={16} />
-              <span>Cargar imagenes</span>
-              <input type="file" accept="image/*" multiple onChange={handleGalleryFiles} />
+              <span>{saving ? "Subiendo..." : "Cargar imagenes"}</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleGalleryFiles}
+                disabled={saving || loading}
+              />
             </label>
           </div>
           <label className="products-description-editor">
@@ -634,7 +677,7 @@ function AdminProductsPage() {
               value={galleryUrl}
               onChange={(event) => setGalleryUrl(event.target.value)}
             />
-            <button type="button" onClick={addGalleryUrl}>
+            <button type="button" onClick={addGalleryUrl} disabled={saving || loading}>
               Agregar URL
             </button>
           </div>
