@@ -20,10 +20,11 @@ npm run build
 Usa dos archivos separados para no mezclar variables publicas con secretos:
 
 - `/.env.local`
-  Variables del frontend, por ejemplo `VITE_SUPABASE_URL` y la clave publica de Supabase.
+  Variables del frontend, por ejemplo `VITE_SUPABASE_URL`, la clave publica de Supabase
+  y `VITE_SITE_URL` para la URL canonica del sitio.
 - `/supabase/functions/.env.local`
   Secrets server-side para Edge Functions, por ejemplo `SUPABASE_SERVICE_ROLE_KEY`,
-  `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET`.
+  `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` y `APP_URL`.
 
 Ambos archivos estan ignorados por Git. Tienes una plantilla base en:
 

@@ -5,9 +5,10 @@ import { ORDER_STATUSES } from "../data/constants";
 import { findOrderByNumberAndPhone, updateOrderStatus } from "../utils/orders";
 import { fetchPublicOrderTracking } from "../utils/orders.remote";
 import { formatCompactDate, formatCurrency } from "../utils/currency";
+import { sanitizeOrderNumber, sanitizePhoneNumber } from "../shared/forms/inputRules";
 
 function normalizeOrderInput(value) {
-  const raw = String(value || "").trim();
+  const raw = sanitizeOrderNumber(String(value || "").trim());
 
   if (!raw) {
     return "";
@@ -130,8 +131,11 @@ function TrackOrderPage() {
           <input
             type="text"
             value={orderNumber}
-            onChange={(event) => setOrderNumber(event.target.value)}
+            onChange={(event) => setOrderNumber(sanitizeOrderNumber(event.target.value))}
             placeholder="Ej: GRZ-ABC123 o 000123"
+            inputMode="text"
+            pattern="[A-Za-z0-9-]+"
+            title="Ingresa letras, numeros y guiones."
           />
         </label>
         <label>
@@ -139,8 +143,11 @@ function TrackOrderPage() {
           <input
             type="tel"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => setPhone(sanitizePhoneNumber(event.target.value))}
             placeholder="Opcional para validar"
+            inputMode="numeric"
+            pattern="[0-9]+"
+            title="Ingresa solo numeros."
           />
         </label>
         <button type="submit" className="btn-primary" disabled={searching}>

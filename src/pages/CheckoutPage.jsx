@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
-  CheckCircle2,
   CreditCard,
   LoaderCircle,
   MapPin,
@@ -13,6 +12,11 @@ import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
 import { determinarTipoEnvioPorDireccion } from "../utils/delivery";
+import {
+  sanitizeLettersOnly,
+  sanitizePhoneNumber,
+  sanitizePostalCode,
+} from "../shared/forms/inputRules";
 import { obtenerSucursalesCorreoArgentino } from "../data/branches";
 import { createCheckoutPayment } from "../utils/orders.remote";
 import "./checkout.css";
@@ -22,11 +26,6 @@ const PAYMENT_METHODS = [
     id: "mercadopago",
     label: "Mercado Pago",
     description: "Paga online con tarjeta, saldo o dinero en cuenta.",
-  },
-  {
-    id: "transferencia",
-    label: "Transferencia bancaria",
-    description: "Generamos el pedido y luego confirmas la acreditacion manualmente.",
   },
 ];
 
@@ -85,7 +84,7 @@ function CheckoutPage() {
     address: "",
     locality: "",
     postalCode: "",
-    paymentMethod: "",
+    paymentMethod: PAYMENT_METHODS[0]?.id || "mercadopago",
     observation: "",
   });
   const [deliveryInfo, setDeliveryInfo] = useState({
@@ -145,9 +144,23 @@ function CheckoutPage() {
   const total = summary.total + shippingCost;
 
   const setField = (field, value) => {
+    let nextValue = value;
+
+    if (field === "name" || field === "locality") {
+      nextValue = sanitizeLettersOnly(value);
+    }
+
+    if (field === "phone") {
+      nextValue = sanitizePhoneNumber(value);
+    }
+
+    if (field === "postalCode") {
+      nextValue = sanitizePostalCode(value);
+    }
+
     setForm((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: nextValue,
     }));
   };
 
@@ -287,8 +300,6 @@ function CheckoutPage() {
       setSubmitting(false);
     }
   };
-
-  const selectedPayment = PAYMENT_METHODS.find((method) => method.id === form.paymentMethod);
 
   return (
     <div className="checkout-container">
@@ -437,6 +448,10 @@ function CheckoutPage() {
                     value={form.name}
                     onChange={(event) => setField("name", event.target.value)}
                     placeholder="Ej: Juan Perez"
+                    autoComplete="name"
+                    inputMode="text"
+                    pattern="[A-Za-zÀ-ÿ\s'-]+"
+                    title="Ingresa solo letras."
                   />
                 </label>
 
@@ -447,6 +462,10 @@ function CheckoutPage() {
                     value={form.phone}
                     onChange={(event) => setField("phone", event.target.value)}
                     placeholder="Ej: 1123456789"
+                    autoComplete="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]+"
+                    title="Ingresa solo numeros."
                   />
                 </label>
 
@@ -485,20 +504,28 @@ function CheckoutPage() {
                   <label className="input-group">
                     Localidad *
                     <input
-                      type="text"
-                      value={form.locality}
-                      onChange={(event) => setField("locality", event.target.value)}
-                    />
-                  </label>
+                    type="text"
+                    value={form.locality}
+                    onChange={(event) => setField("locality", event.target.value)}
+                    autoComplete="address-level2"
+                    inputMode="text"
+                    pattern="[A-Za-zÀ-ÿ\s'-]+"
+                    title="Ingresa solo letras."
+                  />
+                </label>
 
-                  <label className="input-group">
-                    C.P. *
+                <label className="input-group">
+                  C.P. *
                     <input
-                      type="text"
-                      value={form.postalCode}
-                      onChange={(event) => setField("postalCode", event.target.value)}
-                    />
-                  </label>
+                    type="text"
+                    value={form.postalCode}
+                    onChange={(event) => setField("postalCode", event.target.value)}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    pattern="[0-9]+"
+                    title="Ingresa solo numeros."
+                  />
+                </label>
                 </div>
 
                 {deliveryInfo.loading && (
@@ -517,37 +544,92 @@ function CheckoutPage() {
 
                 {deliveryInfo.type === "correo" && (
                   <div className="correo-selection-area">
-                    <div className="delivery-result-card correo">
-                      <MapPin className="icon" />
+                    <div className="correo-selection-head">
                       <div>
-                        <strong>Envio por Correo Argentino</strong>
-                        <p>Selecciona una sucursal cercana para retirar el paquete.</p>
+                        <span className="correo-selection-kicker">Retiro por sucursal</span>
+                        <h4>Elige donde quieres recibir tu paquete</h4>
                       </div>
+                      <span className="correo-selection-count">
+                        {branches.length} {branches.length === 1 ? "sucursal disponible" : "sucursales disponibles"}
+                      </span>
                     </div>
 
-                    <div className="branch-selector">
-                      <h4>Selecciona una sucursal *</h4>
-                      <div className="branch-list">
-                        {branches.map((branch) => (
-                          <div
-                            key={branch.id}
-                            className={`branch-card ${
-                              selectedBranch?.id === branch.id ? "selected" : ""
-                            }`}
-                            onClick={() => setSelectedBranch(branch)}
-                          >
-                            <div className="branch-info">
-                              <strong>{branch.name}</strong>
-                              <p>
-                                {branch.address}, {branch.city}
-                              </p>
-                              <small>{branch.hours}</small>
-                            </div>
-                            <button type="button" className="btn-select">
-                              {selectedBranch?.id === branch.id ? "Seleccionada" : "Seleccionar"}
-                            </button>
+                    <div className="correo-selection-layout">
+                      <aside className="correo-selection-side">
+                        <div className="delivery-result-card correo correo-summary-card">
+                          <MapPin className="icon" />
+                          <div>
+                            <strong>Envio por Correo Argentino</strong>
+                            <p>Selecciona una sucursal cercana para retirar el paquete con seguimiento.</p>
                           </div>
-                        ))}
+                        </div>
+
+                        <div className="correo-selection-benefits">
+                          <span>Retiro en sucursal segun tu zona</span>
+                          <span>Seguimiento del pedido incluido</span>
+                          <span>Confirmacion clara del punto elegido</span>
+                        </div>
+
+                        {selectedBranch ? (
+                          <div className="correo-selected-branch-card">
+                            <span className="correo-selected-kicker">Sucursal elegida</span>
+                            <strong>{selectedBranch.name}</strong>
+                            <p>
+                              {selectedBranch.address}, {selectedBranch.city}
+                            </p>
+                            <small>{selectedBranch.hours}</small>
+                          </div>
+                        ) : (
+                          <div className="correo-selected-branch-card is-empty">
+                            <span className="correo-selected-kicker">Sucursal elegida</span>
+                            <strong>Aun no seleccionaste una sucursal</strong>
+                            <p>Haz clic en una opcion del listado para confirmar tu punto de retiro.</p>
+                          </div>
+                        )}
+                      </aside>
+
+                      <div className="branch-selector">
+                        <div className="branch-selector-header">
+                          <div>
+                            <h4>Selecciona una sucursal *</h4>
+                            <p>Te mostraremos el punto de retiro disponible segun tu direccion.</p>
+                          </div>
+                          {selectedBranch ? (
+                            <span className="branch-selected-pill">{selectedBranch.name}</span>
+                          ) : null}
+                        </div>
+
+                        <div className="branch-list">
+                          {branches.map((branch) => (
+                            <div
+                              key={branch.id}
+                              className={`branch-card ${
+                                selectedBranch?.id === branch.id ? "selected" : ""
+                              }`}
+                              onClick={() => setSelectedBranch(branch)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  setSelectedBranch(branch);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              aria-pressed={selectedBranch?.id === branch.id}
+                            >
+                              <div className="branch-info">
+                                <strong>{branch.name}</strong>
+                                <p>
+                                  {branch.address}, {branch.city}
+                                </p>
+                                <small>{branch.hours}</small>
+                              </div>
+                              <button type="button" className="btn-select">
+                                {selectedBranch?.id === branch.id ? "Seleccionada" : "Seleccionar"}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -560,7 +642,7 @@ function CheckoutPage() {
                 <span className="step-num">3</span>
                 <div>
                   <h3>Forma de pago</h3>
-                  <p>Elige como quieres abonar tu compra.</p>
+                  <p>Tu compra se procesa online de forma segura con Mercado Pago.</p>
                 </div>
               </div>
 
@@ -601,11 +683,6 @@ function CheckoutPage() {
                     <LoaderCircle size={20} className="spin" />
                     Procesando...
                   </>
-                ) : selectedPayment?.id === "transferencia" ? (
-                  <>
-                    <CheckCircle2 size={20} />
-                    Confirmar pedido
-                  </>
                 ) : (
                   <>
                     <CreditCard size={20} />
@@ -615,9 +692,7 @@ function CheckoutPage() {
               </button>
 
               <p className="help-txt">
-                {selectedPayment?.id === "transferencia"
-                  ? "Se generara el pedido y quedara pendiente de acreditacion manual."
-                  : "Al continuar se abrira el checkout seguro de Mercado Pago con tu pedido ya registrado."}
+                Al continuar se abrira el checkout seguro de Mercado Pago con tu pedido ya registrado.
               </p>
             </div>
           </main>

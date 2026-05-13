@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useCatalogProducts } from "../hooks/useCatalogProducts";
+import { getRelatedProducts, getStockState } from "../shared/catalog/productDiscovery";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
 import ProductCard from "../components/ui/ProductCard";
@@ -33,14 +34,8 @@ function ProductPage() {
   }, [product]);
 
   const relatedProducts = useMemo(() => {
-    if (!product) {
-      return [];
-    }
-
-    return products
-      .filter((item) => item.category === product.category && item.id !== product.id)
-      .slice(0, 4);
-  }, [product]);
+    return getRelatedProducts(products, product, 4);
+  }, [product, products]);
 
   if (!product) {
     return (
@@ -57,9 +52,7 @@ function ProductPage() {
   const effectivePrice = getEffectivePrice(product);
   const viewerCount = 200 + (product.reviews * 7) % 800;
   const galleryCount = product.gallery?.length || 0;
-  const stockLabel =
-    product.stock > 20 ? "Stock disponible" : product.stock > 8 ? "Ultimas unidades" : "Stock bajo";
-  const stockTone = product.stock > 20 ? "ok" : product.stock > 8 ? "warn" : "alert";
+  const stockState = getStockState(product.stock);
 
   const handleQuantity = (delta) => {
     setQuantity((current) => Math.min(product.stock, Math.max(1, current + delta)));
@@ -143,7 +136,7 @@ function ProductPage() {
             <div className="product-info-chips">
               <span>{product.brand}</span>
               <span>{product.category}</span>
-              <span className={`stock-state ${stockTone}`}>{stockLabel}</span>
+              <span className={`stock-state ${stockState.tone}`}>{stockState.label}</span>
             </div>
 
             <h1>{product.name}</h1>

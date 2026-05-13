@@ -1,17 +1,11 @@
 import { cabecerasCors } from "../_shared/cors.ts";
 import { invocarFuncionInterna } from "../_shared/internalFunctions.ts";
 import { crearClienteAdminSupabase } from "../_shared/supabaseAdmin.ts";
-
-const PAYMENT_STATUS_MAP = {
-  approved: "approved",
-  authorized: "pending",
-  in_process: "pending",
-  pending: "pending",
-  rejected: "rejected",
-  cancelled: "rejected",
-  refunded: "refunded",
-  charged_back: "rejected",
-} as const;
+import {
+  parseSignatureHeader,
+  resolveInternalPaymentStatus,
+  resolveOrderStatus,
+} from "../../../src/shared/payments/webhook.ts";
 
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
@@ -27,30 +21,6 @@ function normalizeText(value: unknown) {
 function normalizeTimestamp(value: unknown) {
   const text = normalizeText(value);
   return text || null;
-}
-
-function parseSignatureHeader(signatureHeader: string | null) {
-  if (!signatureHeader) {
-    return { ts: "", v1: "" };
-  }
-
-  return signatureHeader.split(",").reduce(
-    (acc, part) => {
-      const [key, rawValue] = part.split("=");
-      const value = normalizeText(rawValue);
-
-      if (normalizeText(key) === "ts") {
-        acc.ts = value;
-      }
-
-      if (normalizeText(key) === "v1") {
-        acc.v1 = value;
-      }
-
-      return acc;
-    },
-    { ts: "", v1: "" },
-  );
 }
 
 async function createHmacSha256(secret: string, manifest: string) {
@@ -93,18 +63,6 @@ async function validateWebhookSignature(request: Request, notificationId: string
   const generated = await createHmacSha256(secret, manifest);
 
   return generated === v1;
-}
-
-function resolveInternalPaymentStatus(mercadoPagoStatus: string) {
-  return PAYMENT_STATUS_MAP[mercadoPagoStatus as keyof typeof PAYMENT_STATUS_MAP] || "pending";
-}
-
-function resolveOrderStatus(currentOrderStatus: string, internalPaymentStatus: string) {
-  if (internalPaymentStatus === "approved") {
-    return currentOrderStatus === "cancelled" ? "cancelled" : "paid";
-  }
-
-  return currentOrderStatus || "pending";
 }
 
 async function fetchMercadoPagoPayment(paymentId: string) {

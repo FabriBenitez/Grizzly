@@ -4,6 +4,11 @@ import { Link } from "react-router-dom";
 import ProductCard from "../components/ui/ProductCard";
 import SectionTitle from "../components/ui/SectionTitle";
 import { useCatalogProducts } from "../hooks/useCatalogProducts";
+import {
+  getComboProducts,
+  getMostSoldProducts,
+  getPromoProducts,
+} from "../shared/catalog/productDiscovery";
 import { getActiveHeroSlides } from "../utils/heroSlides";
 import SeoPagina from "../shared/seo/SeoPagina";
 import type { DiapositivaHero } from "../tipos/hero";
@@ -27,11 +32,9 @@ function HomePage() {
   const [indiceActivo, setIndiceActivo] = useState(0);
   const [diapositivasHero] = useState<DiapositivaHero[]>(() => getActiveHeroSlides() as DiapositivaHero[]);
 
-  const promociones = useMemo(() => productos.filter((producto) => producto.promo).slice(0, 6), [productos]);
-  const combos = useMemo(() => productos.filter((producto) => producto.combo).slice(0, 6), [productos]);
-  const masVendidos = useMemo(() => {
-    return [...productos].sort((a, b) => b.sold - a.sold).slice(0, 6);
-  }, [productos]);
+  const promociones = useMemo(() => getPromoProducts(productos, 6), [productos]);
+  const combos = useMemo(() => getComboProducts(productos, 6), [productos]);
+  const masVendidos = useMemo(() => getMostSoldProducts(productos, 6), [productos]);
 
   useEffect(() => {
     if (diapositivasHero.length <= 1) {

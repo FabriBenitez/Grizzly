@@ -7,7 +7,8 @@ function leerVariablePublica(
   nombreVariable:
     | "VITE_SUPABASE_URL"
     | "VITE_SUPABASE_ANON_KEY"
-    | "VITE_SUPABASE_PUBLISHABLE_KEY",
+    | "VITE_SUPABASE_PUBLISHABLE_KEY"
+    | "VITE_SITE_URL",
 ) {
   return import.meta.env[nombreVariable]?.trim() ?? "";
 }
@@ -22,6 +23,10 @@ export function obtenerClaveAnonSupabase() {
 
 export function obtenerClavePublicableSupabase() {
   return leerVariablePublica("VITE_SUPABASE_PUBLISHABLE_KEY");
+}
+
+export function obtenerSiteUrlPublica() {
+  return leerVariablePublica("VITE_SITE_URL").replace(/\/$/, "");
 }
 
 function obtenerClavePublicaSupabase() {
