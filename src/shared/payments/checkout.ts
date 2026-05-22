@@ -1,4 +1,4 @@
-import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules";
+import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules.ts";
 
 export const PAYMENT_METHODS = {
   mercadoPago: "mercadopago",

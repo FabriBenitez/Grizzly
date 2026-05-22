@@ -17,7 +17,6 @@ function ProductCardSkeleton() {
         <div className="skeleton-line skeleton-rating skeleton-shimmer" />
         <div className="skeleton-line skeleton-promo skeleton-shimmer" />
         <div className="skeleton-line skeleton-price skeleton-shimmer" />
-        <div className="skeleton-line skeleton-transfer skeleton-shimmer" />
       </div>
     </article>
   );

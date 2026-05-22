@@ -23,6 +23,10 @@ function normalizeTimestamp(value: unknown) {
   return text || null;
 }
 
+function allowUnsignedWebhook() {
+  return normalizeText(Deno.env.get("ALLOW_UNSIGNED_MP_WEBHOOK")).toLowerCase() === "true";
+}
+
 async function createHmacSha256(secret: string, manifest: string) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -43,26 +47,38 @@ async function validateWebhookSignature(request: Request, notificationId: string
   const secret = Deno.env.get("MERCADOPAGO_WEBHOOK_SECRET")?.trim();
 
   if (!secret) {
-    return true;
+    return {
+      valid: allowUnsignedWebhook(),
+      reason: allowUnsignedWebhook() ? "unsigned_allowed" : "missing_secret",
+    };
   }
 
   const signatureHeader = request.headers.get("x-signature");
   const requestId = request.headers.get("x-request-id");
 
   if (!signatureHeader || !requestId) {
-    return false;
+    return {
+      valid: false,
+      reason: "missing_headers",
+    };
   }
 
   const { ts, v1 } = parseSignatureHeader(signatureHeader);
 
   if (!ts || !v1) {
-    return false;
+    return {
+      valid: false,
+      reason: "invalid_header",
+    };
   }
 
   const manifest = `id:${notificationId};request-id:${requestId};ts:${ts};`;
   const generated = await createHmacSha256(secret, manifest);
 
-  return generated === v1;
+  return {
+    valid: generated === v1,
+    reason: generated === v1 ? "ok" : "invalid_signature",
+  };
 }
 
 async function fetchMercadoPagoPayment(paymentId: string) {
@@ -102,6 +118,10 @@ Deno.serve(async (request) => {
     return new Response("ok", { headers: cabecerasCors });
   }
 
+  if (request.method !== "POST") {
+    return jsonResponse({ ok: false, error: "Metodo no permitido." }, 405);
+  }
+
   const url = new URL(request.url);
 
   try {
@@ -129,10 +149,15 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: false, error: "La notificacion no incluye data.id." }, 400);
     }
 
-    const signatureIsValid = await validateWebhookSignature(request, notificationId);
+    const signatureResult = await validateWebhookSignature(request, notificationId);
 
-    if (!signatureIsValid) {
-      return jsonResponse({ ok: false, error: "Firma invalida." }, 401);
+    if (!signatureResult.valid) {
+      const errorMessage =
+        signatureResult.reason === "missing_secret"
+          ? "Falta MERCADOPAGO_WEBHOOK_SECRET. Para pruebas manuales puedes habilitar ALLOW_UNSIGNED_MP_WEBHOOK=true."
+          : "Firma invalida.";
+
+      return jsonResponse({ ok: false, error: errorMessage }, 401);
     }
 
     const mercadoPagoPayment = await fetchMercadoPagoPayment(notificationId);

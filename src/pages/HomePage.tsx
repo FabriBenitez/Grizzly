@@ -30,7 +30,9 @@ const categoriasDestacadas = [
 function HomePage() {
   const productos = useCatalogProducts();
   const [indiceActivo, setIndiceActivo] = useState(0);
-  const [diapositivasHero] = useState<DiapositivaHero[]>(() => getActiveHeroSlides() as DiapositivaHero[]);
+  const [diapositivasHero] = useState<DiapositivaHero[]>(
+    () => getActiveHeroSlides() as DiapositivaHero[],
+  );
 
   const promociones = useMemo(() => getPromoProducts(productos, 6), [productos]);
   const combos = useMemo(() => getComboProducts(productos, 6), [productos]);
@@ -62,8 +64,8 @@ function HomePage() {
   return (
     <div className={estilos.inicio}>
       <SeoPagina
-        titulo="Grizzly Suplementos | Creatinas, proteínas y combos"
-        descripcion="Comprá suplementos en Grizzly: creatinas, proteínas, combos y promos destacadas con seguimiento de pedido y atención personalizada."
+        titulo="Grizzly Suplementos | Creatinas, proteinas y combos"
+        descripcion="Compra suplementos en Grizzly: creatinas, proteinas, combos y promos destacadas con seguimiento de pedido y atencion personalizada."
       />
 
       <section
@@ -92,7 +94,7 @@ function HomePage() {
             type="button"
             className="hero-carousel-arrow left"
             onClick={mostrarPromoAnterior}
-            aria-label="Mostrar promoción anterior"
+            aria-label="Mostrar promocion anterior"
           >
             <ChevronLeft size={24} />
           </button>
@@ -101,7 +103,7 @@ function HomePage() {
             type="button"
             className="hero-carousel-arrow right"
             onClick={mostrarPromoSiguiente}
-            aria-label="Mostrar siguiente promoción"
+            aria-label="Mostrar siguiente promocion"
           >
             <ChevronRight size={24} />
           </button>
@@ -146,14 +148,14 @@ function HomePage() {
                 </div>
               ) : null}
 
-              <div className="hero-carousel-dots" aria-label="Seleccionar promoción">
+              <div className="hero-carousel-dots" aria-label="Seleccionar promocion">
                 {diapositivasHero.map((slide, index) => (
                   <button
                     key={slide.id}
                     type="button"
                     className={`hero-carousel-dot ${index === indiceActivo ? "active" : ""}`}
                     onClick={() => setIndiceActivo(index)}
-                    aria-label={`Ver promoción ${index + 1}`}
+                    aria-label={`Ver promocion ${index + 1}`}
                   />
                 ))}
               </div>
@@ -167,7 +169,7 @@ function HomePage() {
           id="promociones-destacadas"
           eyebrow="Marzo activo"
           title="Promos de marzo"
-          subtitle="Precios especiales por transferencia y combos limitados."
+          subtitle="Selecciones destacadas, packs utiles y beneficios reales para comprar online."
         />
         <div className="product-grid six-col">
           {promociones.map((producto, index) => (
@@ -176,12 +178,15 @@ function HomePage() {
         </div>
       </section>
 
-      <section className={`container section-space ${estilos["inicio__seccion-categorias"]}`} aria-labelledby="categorias-destacadas">
+      <section
+        className={`container section-space ${estilos["inicio__seccion-categorias"]}`}
+        aria-labelledby="categorias-destacadas"
+      >
         <SectionTitle
           id="categorias-destacadas"
-          eyebrow="Explorá por objetivo"
-          title="Categorías destacadas"
-          subtitle="Entrá directo a las líneas más buscadas del catálogo."
+          eyebrow="Explora por objetivo"
+          title="Categorias destacadas"
+          subtitle="Entra directo a las lineas mas buscadas del catalogo."
         />
         <div className={estilos["inicio__categorias-grid"]}>
           {categoriasDestacadas.map((categoria) => {
@@ -195,7 +200,7 @@ function HomePage() {
               >
                 <img
                   src={productoRelacionado?.image || "/assets/products/combo-estrella.jpg"}
-                  alt={`Explorar categoría ${categoria}`}
+                  alt={`Explorar categoria ${categoria}`}
                   className={estilos["inicio__categoria-imagen"]}
                 />
                 <span className={estilos["inicio__categoria-titulo"]}>{categoria}</span>
@@ -209,9 +214,9 @@ function HomePage() {
         <div className="container section-space">
           <SectionTitle
             id="combos-destacados"
-            eyebrow="Aprovechá packs"
+            eyebrow="Aprovecha packs"
             title="Combos destacados"
-            subtitle="Kits armados para fuerza, energía y recuperación."
+            subtitle="Kits armados para fuerza, energia y recuperacion."
             light
           />
           <div className="product-grid six-col">
@@ -226,8 +231,8 @@ function HomePage() {
         <SectionTitle
           id="mas-elegidos"
           eyebrow="Top ventas"
-          title="Los más elegidos"
-          subtitle="Productos con mejor rendimiento según la comunidad."
+          title="Los mas elegidos"
+          subtitle="Productos con mejor rendimiento segun la comunidad."
         />
         <div className="product-grid six-col">
           {masVendidos.map((producto, index) => (
@@ -236,24 +241,27 @@ function HomePage() {
         </div>
       </section>
 
-      <section className={`container section-space ${estilos["inicio__beneficios"]}`} aria-labelledby="beneficios-grizzly">
+      <section
+        className={`container section-space ${estilos["inicio__beneficios"]}`}
+        aria-labelledby="beneficios-grizzly"
+      >
         <h2 id="beneficios-grizzly" className="oculto-visualmente">
           Beneficios de comprar en Grizzly Suplementos
         </h2>
 
         <article className={estilos["inicio__beneficio"]}>
-          <h3>Pedido rápido por WhatsApp</h3>
-          <p>Armá tu carrito, completá datos y enviá la orden lista al vendedor.</p>
+          <h3>Checkout online seguro</h3>
+          <p>Arma tu carrito, confirma tus datos y paga desde el checkout sin depender de un chat.</p>
         </article>
 
         <article className={estilos["inicio__beneficio"]}>
           <h3>Seguimiento de pedido</h3>
-          <p>Controlá estado: pendiente, pago confirmado, preparación, envío o retiro.</p>
+          <p>Controla estado: pendiente, pago confirmado, preparacion, envio o retiro.</p>
         </article>
 
         <article className={estilos["inicio__beneficio"]}>
-          <h3>Atención personalizada</h3>
-          <p>Te asesoramos para elegir suplementos según tu objetivo deportivo.</p>
+          <h3>Soporte por WhatsApp</h3>
+          <p>Te acompanamos con consultas de productos, cambios de datos y seguimiento del pedido.</p>
         </article>
       </section>
     </div>

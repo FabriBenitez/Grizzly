@@ -62,6 +62,7 @@ function App() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/checkout/resultado" element={<CheckoutResultPage />} />
         <Route path="/seguimiento" element={<TrackOrderPage />} />
+        <Route path="/faq" element={<AccountPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/inicio" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { STOREFRONT_CONTACT } from "../../data/storefrontContent";
 import estilos from "./Footer.module.scss";
 
 function Footer() {
@@ -6,33 +7,57 @@ function Footer() {
     <footer className={estilos.pie}>
       <div className={`container ${estilos["pie__grid"]}`}>
         <div className={estilos["pie__columna"]}>
-          <h2 className={estilos["pie__titulo"]}>Categorías</h2>
+          <h2 className={estilos["pie__titulo"]}>Categorias</h2>
           <ul className={estilos["pie__lista"]}>
-            <li><Link to="/">Inicio</Link></li>
-            <li><Link to="/promos">Promos</Link></li>
-            <li><Link to="/catalogo">Productos</Link></li>
-            <li><Link to="/quienes-somos">Quiénes somos</Link></li>
-            <li><Link to="/seguimiento">Seguí tu pedido</Link></li>
-            <li><Link to="/cuenta">Ayuda y pedidos</Link></li>
+            <li>
+              <Link to="/">Inicio</Link>
+            </li>
+            <li>
+              <Link to="/promos">Promos</Link>
+            </li>
+            <li>
+              <Link to="/catalogo">Productos</Link>
+            </li>
+            <li>
+              <Link to="/quienes-somos">Quienes somos</Link>
+            </li>
+            <li>
+              <Link to="/seguimiento">Segui tu pedido</Link>
+            </li>
+            <li>
+              <Link to="/faq">Centro de ayuda</Link>
+            </li>
           </ul>
         </div>
 
         <div className={estilos["pie__columna"]}>
-          <h2 className={estilos["pie__titulo"]}>Información</h2>
+          <h2 className={estilos["pie__titulo"]}>Informacion</h2>
           <ul className={estilos["pie__lista"]}>
-            <li>Términos y condiciones</li>
-            <li>Política de devolución</li>
-            <li>Preguntas frecuentes</li>
-            <li>Trabajá con nosotros</li>
+            <li>
+              <Link to="/faq#pagos">Pagos y checkout</Link>
+            </li>
+            <li>
+              <Link to="/faq#envios">Envios y retiros</Link>
+            </li>
+            <li>
+              <Link to="/faq#cambios">Cambios y consultas</Link>
+            </li>
+            <li>
+              <Link to="/faq#faq">Preguntas frecuentes</Link>
+            </li>
           </ul>
         </div>
 
         <address className={estilos["pie__columna"]}>
           <h2 className={estilos["pie__titulo"]}>Contacto</h2>
           <ul className={estilos["pie__lista"]}>
-            <li>WhatsApp: +54 9 2284 123456</li>
-            <li>Olavarría, Buenos Aires</li>
-            <li>Lunes a sábado de 9 a 20 hs</li>
+            <li>
+              <a href={STOREFRONT_CONTACT.whatsappUrl} target="_blank" rel="noreferrer">
+                WhatsApp para consultas
+              </a>
+            </li>
+            <li>{STOREFRONT_CONTACT.location}</li>
+            <li>{STOREFRONT_CONTACT.hours}</li>
           </ul>
         </address>
 
@@ -43,12 +68,12 @@ function Footer() {
             onSubmit={(event) => event.preventDefault()}
           >
             <label htmlFor="newsletter-email" className="oculto-visualmente">
-              Ingresá tu email para recibir novedades
+              Ingresa tu email para recibir novedades
             </label>
             <input
               id="newsletter-email"
               type="email"
-              placeholder="Ingresá tu email"
+              placeholder="Ingresa tu email"
               className={estilos["pie__newsletter-input"]}
             />
             <button type="submit" className={estilos["pie__newsletter-boton"]}>
@@ -63,12 +88,11 @@ function Footer() {
         <span>Mastercard</span>
         <span>Naranja</span>
         <span>Mercado Pago</span>
-        <span>Transferencia</span>
-        <span>Efectivo</span>
+        <span>Debito</span>
       </div>
 
       <div className={`container ${estilos["pie__base"]}`}>
-        © {new Date().getFullYear()} Grizzly Suplementos
+        &copy; {new Date().getFullYear()} Grizzly Suplementos
       </div>
     </footer>
   );

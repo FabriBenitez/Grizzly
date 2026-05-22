@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -28,6 +28,16 @@ function readLastOrder() {
 }
 
 function getScreenTone(mode, paymentStatus) {
+  if (!paymentStatus) {
+    return {
+      key: "checking",
+      icon: LoaderCircle,
+      title: "Verificando el estado del pago",
+      description:
+        "Estamos consultando el estado real del pedido para mostrarte el resultado mas actualizado posible.",
+    };
+  }
+
   if (mode === "manual") {
     return {
       key: "manual",
@@ -67,7 +77,32 @@ function getScreenTone(mode, paymentStatus) {
   };
 }
 
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeStatus(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function resolveCheckoutMode(mode, order) {
+  const normalizedMode = normalizeStatus(mode);
+
+  if (normalizedMode === "manual") {
+    return "manual";
+  }
+
+  const paymentMethod = normalizeStatus(order?.paymentMethod);
+
+  if (paymentMethod === "transferencia" || paymentMethod === "manual") {
+    return "manual";
+  }
+
+  return "mercadopago";
+}
+
 function CheckoutResultPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
@@ -76,18 +111,28 @@ function CheckoutResultPage() {
   const lastOrder = useMemo(() => readLastOrder(), []);
 
   const mode = searchParams.get("modo") || "";
-  const paymentStatus =
+  const paymentStatusFromQuery =
     searchParams.get("status") ||
     searchParams.get("collection_status") ||
     searchParams.get("payment_status") ||
     "";
+  const [paymentStatusHint, setPaymentStatusHint] = useState(paymentStatusFromQuery);
   const orderNumber =
     searchParams.get("pedido") ||
     searchParams.get("external_reference") ||
     lastOrder?.orderNumber ||
     "";
   const phone = searchParams.get("telefono") || lastOrder?.phone || "";
-  const tone = useMemo(() => getScreenTone(mode, paymentStatus), [mode, paymentStatus]);
+
+  const resolvedMode = useMemo(() => resolveCheckoutMode(mode, order), [mode, order]);
+  const resolvedPaymentStatus = useMemo(
+    () => normalizeStatus(order?.paymentStatus || paymentStatusHint || paymentStatusFromQuery),
+    [order?.paymentStatus, paymentStatusHint, paymentStatusFromQuery],
+  );
+  const tone = useMemo(
+    () => getScreenTone(resolvedMode, resolvedPaymentStatus),
+    [resolvedMode, resolvedPaymentStatus],
+  );
 
   useEffect(() => {
     if (!orderNumber) {
@@ -142,7 +187,42 @@ function CheckoutResultPage() {
         paymentMethod: "mercadopago",
       });
 
-      if (!result?.initPoint) {
+      if (result?.checkoutMode === "already-approved") {
+        setPaymentStatusHint("approved");
+        setOrder((currentOrder) =>
+          currentOrder
+            ? {
+                ...currentOrder,
+                paymentStatus: "approved",
+                status:
+                  currentOrder.status === "Pendiente de pago"
+                    ? "Pago confirmado"
+                    : currentOrder.status,
+              }
+            : currentOrder,
+        );
+        navigate(
+          `/checkout/resultado?status=approved&pedido=${encodeURIComponent(orderNumber)}${
+            phone ? `&telefono=${encodeURIComponent(phone)}` : ""
+          }`,
+          { replace: true },
+        );
+        setRetrying(false);
+        return;
+      }
+
+      if (result?.checkoutMode === "manual") {
+        navigate(
+          `/checkout/resultado?modo=manual&pedido=${encodeURIComponent(orderNumber)}${
+            phone ? `&telefono=${encodeURIComponent(phone)}` : ""
+          }`,
+          { replace: true },
+        );
+        setRetrying(false);
+        return;
+      }
+
+      if (result?.checkoutMode !== "mercadopago" || !result?.initPoint) {
         throw new Error("Mercado Pago no devolvio una URL valida para reintentar.");
       }
 

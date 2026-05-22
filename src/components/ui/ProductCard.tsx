@@ -111,9 +111,6 @@ function ProductCard({ product, compact = false, revealIndex = 0 }: ProductCardP
           <strong className={estilos["tarjeta-producto__precio-final"]} itemProp="price">
             {formatCurrency(precioEfectivo)}
           </strong>
-          <span className={estilos["tarjeta-producto__precio-transferencia"]}>
-            {formatCurrency(product.transferPrice)} con transferencia
-          </span>
         </div>
       </div>
     </article>

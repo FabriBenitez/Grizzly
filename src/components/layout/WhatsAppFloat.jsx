@@ -3,7 +3,7 @@ import { DEFAULT_WHATSAPP } from "../../data/constants";
 
 function WhatsAppFloat() {
   const defaultMessage = encodeURIComponent(
-    "Hola Grizzly, quiero consultar por suplementos y promociones.",
+    "Hola Grizzly, necesito ayuda con una consulta, una compra o un pedido.",
   );
 
   return (
@@ -12,7 +12,7 @@ function WhatsAppFloat() {
       href={`https://wa.me/${DEFAULT_WHATSAPP}?text=${defaultMessage}`}
       target="_blank"
       rel="noreferrer"
-      aria-label="Escribinos por WhatsApp"
+      aria-label="Escribinos por WhatsApp para consultas"
     >
       <MessageCircle size={24} />
     </a>

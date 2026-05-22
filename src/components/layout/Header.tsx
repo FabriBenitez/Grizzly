@@ -10,13 +10,14 @@ const navegacionPrincipal = [
   { to: "/", label: "Inicio" },
   { to: "/promos", label: "Promos" },
   { to: "/catalogo", label: "Productos" },
-  { to: "/quienes-somos", label: "Quiénes somos" },
+  { to: "/quienes-somos", label: "Quienes somos" },
+  { to: "/faq", label: "Ayuda" },
 ];
 
 const mensajesPromocionales = [
-  "Envío gratis a partir de $120.000 en tu compra",
-  "Combos destacados con precio especial por transferencia",
-  "Atención personalizada para elegir tu suplementación",
+  "Envio gratis a partir de $120.000 en tu compra",
+  "Checkout online seguro con seguimiento de pedido",
+  "Atencion personalizada para elegir tu suplementacion",
 ];
 
 function Header() {
@@ -76,7 +77,11 @@ function Header() {
       </div>
 
       <div className={`container ${estilos["encabezado__superior"]}`}>
-        <Link to="/" className={estilos["encabezado__marca"]} aria-label="Ir al inicio de Grizzly Suplementos">
+        <Link
+          to="/"
+          className={estilos["encabezado__marca"]}
+          aria-label="Ir al inicio de Grizzly Suplementos"
+        >
           <img
             src="/assets/logo-grizzly.jpg"
             alt="Logo de Grizzly Suplementos"
@@ -90,12 +95,12 @@ function Header() {
 
         <form className={estilos["encabezado__buscador"]} onSubmit={manejarBusqueda}>
           <label htmlFor="busqueda-catalogo" className="oculto-visualmente">
-            Buscar productos del catálogo
+            Buscar productos del catalogo
           </label>
           <input
             id="busqueda-catalogo"
             type="search"
-            placeholder="¿Qué estás buscando?"
+            placeholder="Que estas buscando?"
             value={consulta}
             onChange={(event) => setConsulta(event.target.value)}
             className={estilos["encabezado__buscador-input"]}
@@ -113,7 +118,7 @@ function Header() {
           <Link
             to="/admin"
             className={estilos["encabezado__acceso-admin"]}
-            aria-label="Abrir panel de administración"
+            aria-label="Abrir panel de administracion"
           >
             <span>Admin</span>
           </Link>
@@ -129,7 +134,7 @@ function Header() {
             type="button"
             className={estilos["encabezado__menu-boton"]}
             onClick={() => setMenuAbierto((previo) => !previo)}
-            aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
+            aria-label={menuAbierto ? "Cerrar menu" : "Abrir menu"}
           >
             {menuAbierto ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -139,7 +144,7 @@ function Header() {
       <div
         className={`${estilos["encabezado__nav-contenedor"]} ${menuAbierto ? estilos["encabezado__nav-contenedor--abierto"] : ""}`}
       >
-        <nav className={`container ${estilos["encabezado__nav"]}`} aria-label="Navegación principal">
+        <nav className={`container ${estilos["encabezado__nav"]}`} aria-label="Navegacion principal">
           {navegacionPrincipal.map((item) =>
             item.to === "/catalogo" ? (
               <div

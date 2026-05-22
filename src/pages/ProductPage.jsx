@@ -158,7 +158,7 @@ function ProductPage() {
                 <strong>{formatCurrency(effectivePrice)}</strong>
                 {product.promoPrice && <small>{formatCurrency(product.price)}</small>}
               </div>
-              <span>{formatCurrency(product.transferPrice)} con transferencia</span>
+              <span>Paga online con Mercado Pago y confirma tu compra en el momento.</span>
               <p className="delivery-note">
                 <Truck size={16} />
                 Envio gratis superando los $120.000

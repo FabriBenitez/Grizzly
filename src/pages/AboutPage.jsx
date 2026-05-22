@@ -1,4 +1,4 @@
-﻿function AboutPage() {
+function AboutPage() {
   return (
     <div className="about-page">
       <section className="about-hero">
@@ -26,7 +26,7 @@
           <ul className="story-points">
             <li>Asesoramiento cercano segun tus objetivos.</li>
             <li>Promociones reales y combos con stock actualizado.</li>
-            <li>Compra simple: carrito + cierre por WhatsApp.</li>
+            <li>Compra simple con catalogo, checkout online y seguimiento real.</li>
           </ul>
         </article>
 
@@ -46,8 +46,8 @@
               <span>pedidos gestionados</span>
             </div>
             <div>
-              <strong>24 hs</strong>
-              <span>respuesta por WhatsApp</span>
+              <strong>Soporte real</strong>
+              <span>acompanamiento por WhatsApp</span>
             </div>
             <div>
               <strong>9 estados</strong>
@@ -68,7 +68,7 @@
         </article>
         <article>
           <h4>Compra simple</h4>
-          <p>Carrito, checkout y cierre por WhatsApp para mantener una experiencia agil y directa.</p>
+          <p>Catalogo, checkout online y soporte para que toda la experiencia sea agil y clara.</p>
         </article>
       </section>
     </div>

@@ -297,10 +297,6 @@ Deno.serve(async (request) => {
             paymentMethod: requestedPaymentMethod,
           });
 
-    if (creatingNewOrder) {
-      await enviarEmailPedidoCreado(order.orderNumber);
-    }
-
     if (order.paymentStatus === "approved") {
       return jsonResponse(
         {
@@ -315,6 +311,10 @@ Deno.serve(async (request) => {
     }
 
     if (requestedPaymentMethod === PAYMENT_METHODS.transferencia) {
+      if (creatingNewOrder) {
+        await enviarEmailPedidoCreado(order.orderNumber);
+      }
+
       return jsonResponse(
         {
           ok: true,
@@ -334,6 +334,10 @@ Deno.serve(async (request) => {
     });
 
     await syncPaymentPreference(order.id, preference as Record<string, unknown>);
+
+    if (creatingNewOrder) {
+      await enviarEmailPedidoCreado(order.orderNumber);
+    }
 
     return jsonResponse(
       {
