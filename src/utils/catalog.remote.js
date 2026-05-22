@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { readCatalogProducts, saveCatalogProducts } from "./catalogStore";
 
-const PRODUCT_SELECT = `
+export const CATALOG_PRODUCT_SELECT = `
   id,
   category_id,
   brand_id,
@@ -274,10 +274,14 @@ async function syncProductImages(productId, product) {
 }
 
 export async function fetchAdminCatalogFromSupabase() {
+  return fetchCatalogFromSupabase();
+}
+
+export async function fetchCatalogFromSupabase() {
   const client = requireSupabase();
   const { data, error } = await client
     .from("products")
-    .select(PRODUCT_SELECT)
+    .select(CATALOG_PRODUCT_SELECT)
     .order("created_at", { ascending: false });
 
   if (error) {
