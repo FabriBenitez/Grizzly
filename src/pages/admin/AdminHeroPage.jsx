@@ -1,13 +1,16 @@
-import { useMemo, useState } from "react";
-import { Eye, EyeOff, ImagePlus, LayoutTemplate, Rows3 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, EyeOff, LayoutTemplate, Rows3 } from "lucide-react";
 import AdminStatCard from "../../components/admin/AdminStatCard";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { heroPromoSlides } from "../../data/homePromos";
-import { HERO_SLIDES_STORAGE_KEY, normalizeHeroSlides } from "../../utils/heroSlides";
+import { fetchHeroSlidesFromSupabase, upsertHeroBanner, deleteHeroBanner } from "../../utils/hero.remote";
+import { getDefaultHeroSlides } from "../../utils/heroSlides";
 
 const baseDraft = {
   id: "",
+  title: "",
+  subtitle: "",
   image: "",
+  ctaLabel: "",
+  ctaHref: "/catalogo",
   active: true,
   order: 1,
 };
@@ -15,7 +18,11 @@ const baseDraft = {
 function slideToDraft(slide) {
   return {
     id: slide.id,
+    title: slide.title || slide.titleHighlight || "",
+    subtitle: slide.description || "",
     image: slide.image,
+    ctaLabel: slide.ctaLabel || "",
+    ctaHref: slide.ctaHref || "/catalogo",
     active: slide.active,
     order: slide.order,
   };
@@ -23,34 +30,54 @@ function slideToDraft(slide) {
 
 function draftToSlide(draft) {
   return {
-    id: draft.id || `hero_${Date.now()}`,
+    id: draft.id || "",
+    title: draft.title.trim(),
+    subtitle: draft.subtitle.trim(),
     image: draft.image.trim(),
-    kicker: "",
-    titleLead: "",
-    titleHighlight: "",
-    titleTail: "",
-    description: "",
-    badges: [],
-    stats: [],
-    showOverlay: false,
+    ctaLabel: draft.ctaLabel.trim(),
+    ctaHref: draft.ctaHref.trim(),
     active: draft.active,
     order: Number(draft.order || 1),
   };
 }
 
 function AdminHeroPage() {
-  const [slides, setSlides] = useLocalStorage(
-    HERO_SLIDES_STORAGE_KEY,
-    normalizeHeroSlides(heroPromoSlides),
-  );
-  const [draft, setDraft] = useState(() => slideToDraft(normalizeHeroSlides(heroPromoSlides)[0]));
+  const [slides, setSlides] = useState(() => getDefaultHeroSlides());
+  const [draft, setDraft] = useState(() => slideToDraft(getDefaultHeroSlides()[0]));
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const orderedSlides = useMemo(() => normalizeHeroSlides(slides), [slides]);
+  const orderedSlides = useMemo(
+    () => [...slides].sort((left, right) => left.order - right.order),
+    [slides],
+  );
   const activeSlides = useMemo(
     () => orderedSlides.filter((slide) => slide.active),
     [orderedSlides],
   );
+
+  const loadSlides = async () => {
+    setLoading(true);
+    try {
+      const remoteSlides = await fetchHeroSlidesFromSupabase({ includeInactive: true });
+      setSlides(remoteSlides);
+      setMessage("");
+    } catch (loadError) {
+      setSlides(getDefaultHeroSlides());
+      setMessage(
+        loadError instanceof Error
+          ? loadError.message
+          : "No pudimos cargar los banners reales. Mostrando fallback local.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSlides();
+  }, []);
 
   const resetDraft = () => {
     setDraft({
@@ -64,51 +91,81 @@ function AdminHeroPage() {
     setMessage("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!draft.image.trim()) {
       setMessage("Completa la imagen del banner para guardarlo.");
       return;
     }
 
-    const nextSlide = draftToSlide(draft);
-    setSlides((prev) => {
-      const exists = prev.some((slide) => slide.id === nextSlide.id);
-      const nextSlides = exists
-        ? prev.map((slide) => (slide.id === nextSlide.id ? nextSlide : slide))
-        : [...prev, nextSlide];
-      return normalizeHeroSlides(nextSlides);
-    });
-    setMessage(draft.id ? "Banner actualizado correctamente." : "Banner creado correctamente.");
-    resetDraft();
+    setSaving(true);
+    try {
+      await upsertHeroBanner(draftToSlide(draft));
+      await loadSlides();
+      setMessage(draft.id ? "Banner actualizado correctamente." : "Banner creado correctamente.");
+      resetDraft();
+    } catch (saveError) {
+      setMessage(
+        saveError instanceof Error
+          ? saveError.message
+          : "No pudimos guardar el banner en la base.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggleSlide = (id) => {
-    setSlides((prev) =>
-      normalizeHeroSlides(
-        prev.map((slide) => (slide.id === id ? { ...slide, active: !slide.active } : slide)),
-      ),
-    );
+  const toggleSlide = async (slide) => {
+    setSaving(true);
+    try {
+      await upsertHeroBanner({
+        ...slideToDraft(slide),
+        active: !slide.active,
+      });
+      await loadSlides();
+      setMessage("Estado del banner actualizado.");
+    } catch (toggleError) {
+      setMessage(
+        toggleError instanceof Error
+          ? toggleError.message
+          : "No pudimos actualizar el estado del banner.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const removeSlide = (id) => {
-    setSlides((prev) => {
-      const nextSlides = prev.filter((slide) => slide.id !== id);
-      return normalizeHeroSlides(nextSlides.length ? nextSlides : heroPromoSlides);
-    });
-    setMessage("Banner eliminado del hero.");
-    resetDraft();
+  const removeSlide = async (id) => {
+    setSaving(true);
+    try {
+      await deleteHeroBanner(id);
+      await loadSlides();
+      setMessage("Banner eliminado del hero.");
+      resetDraft();
+    } catch (removeError) {
+      setMessage(
+        removeError instanceof Error
+          ? removeError.message
+          : "No pudimos eliminar el banner del hero.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="admin-page-root">
       <header className="admin-page-header">
         <p>Hero</p>
-        <h1>Gestion simple de banners</h1>
+        <h1>Gestion real de banners</h1>
         <span>
-          Carga la imagen del banner, ordenala y activala para mostrarla en el carrusel principal.
+          Carga la imagen, el mensaje principal y la accion comercial para mostrar el carrusel del
+          home desde Supabase.
         </span>
       </header>
+
+      {loading && <section className="admin-demo-note">Cargando banners reales...</section>}
+      {!loading && message && <section className="admin-demo-note">{message}</section>}
 
       <section className="admin-kpi-grid">
         <AdminStatCard
@@ -153,20 +210,20 @@ function AdminHeroPage() {
           <div className="hero-admin-list">
             {orderedSlides.map((slide) => (
               <article key={slide.id} className={`hero-admin-card ${slide.active ? "on" : "off"}`}>
-                <img src={slide.image} alt={`Banner ${slide.order}`} />
+                <img src={slide.image} alt={slide.title || `Banner ${slide.order}`} />
                 <div>
-                  <strong>Banner #{slide.order}</strong>
+                  <strong>{slide.title || `Banner #${slide.order}`}</strong>
                   <small>Orden {slide.order}</small>
                   <small>{slide.active ? "Visible en el home" : "Pausado"}</small>
                 </div>
                 <div className="promo-actions">
-                  <button type="button" onClick={() => handleEdit(slide)}>
+                  <button type="button" onClick={() => handleEdit(slide)} disabled={saving}>
                     Editar
                   </button>
-                  <button type="button" onClick={() => toggleSlide(slide.id)}>
+                  <button type="button" onClick={() => toggleSlide(slide)} disabled={saving}>
                     {slide.active ? "Desactivar" : "Activar"}
                   </button>
-                  <button type="button" onClick={() => removeSlide(slide.id)}>
+                  <button type="button" onClick={() => removeSlide(slide.id)} disabled={saving}>
                     Eliminar
                   </button>
                 </div>
@@ -184,12 +241,52 @@ function AdminHeroPage() {
           </div>
           <form className="hero-admin-form" onSubmit={handleSubmit}>
             <label className="hero-admin-wide">
+              Titulo
+              <input
+                type="text"
+                placeholder="Ej: Lanzamientos de la semana"
+                value={draft.title}
+                onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+              />
+            </label>
+            <label className="hero-admin-wide">
+              Subtitulo
+              <textarea
+                rows="3"
+                placeholder="Mensaje breve para acompanar el banner"
+                value={draft.subtitle}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, subtitle: event.target.value }))
+                }
+              />
+            </label>
+            <label className="hero-admin-wide">
               URL de imagen
               <input
                 type="url"
                 placeholder="https://..."
                 value={draft.image}
                 onChange={(event) => setDraft((prev) => ({ ...prev, image: event.target.value }))}
+              />
+            </label>
+            <label>
+              CTA label
+              <input
+                type="text"
+                placeholder="Ej: Ver catalogo"
+                value={draft.ctaLabel}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, ctaLabel: event.target.value }))
+                }
+              />
+            </label>
+            <label>
+              CTA destino
+              <input
+                type="text"
+                placeholder="/catalogo"
+                value={draft.ctaHref}
+                onChange={(event) => setDraft((prev) => ({ ...prev, ctaHref: event.target.value }))}
               />
             </label>
             <label>
@@ -210,17 +307,18 @@ function AdminHeroPage() {
               <span>Banner activo en el home</span>
             </label>
             <p className="hero-admin-helper">
-              Este modulo administra solo la imagen del banner. El slide se muestra limpio, sin
-              textos superpuestos.
+              Todo lo que edites aqui impacta en el carrusel principal del home y deja de depender
+              de localStorage.
             </p>
             <div className="hero-admin-actions">
-              <button type="submit">{draft.id ? "Guardar cambios" : "Crear banner"}</button>
-              <button type="button" className="admin-secondary-btn" onClick={resetDraft}>
+              <button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : draft.id ? "Guardar cambios" : "Crear banner"}
+              </button>
+              <button type="button" className="admin-secondary-btn" onClick={resetDraft} disabled={saving}>
                 Limpiar formulario
               </button>
             </div>
           </form>
-          {message && <p className="admin-message">{message}</p>}
         </article>
       </section>
 
@@ -236,11 +334,11 @@ function AdminHeroPage() {
           style={{ "--hero-preview": `url("${draft.image || activeSlides[0]?.image || "/assets/products/combo-estrella.jpg"}")` }}
         >
           <div className="hero-admin-preview-copy">
-            <p>Vista previa del banner</p>
+            <p>{draft.title || "Vista previa del banner"}</p>
             <h3>
               <strong>{draft.active ? "Banner activo" : "Banner pausado"}</strong>
             </h3>
-            <small>Orden {draft.order || 1} dentro del carrusel principal.</small>
+            <small>{draft.subtitle || "Agrega un subtitulo para reforzar el mensaje comercial."}</small>
           </div>
         </article>
       </section>

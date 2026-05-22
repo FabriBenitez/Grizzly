@@ -87,6 +87,9 @@ function AdminOverviewPage() {
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const topProducts = useMemo(() => getTopProductsFromOrders(orders, 5), [orders]);
   const stockThreshold = useMemo(() => readStockThreshold(), []);
+  const highlightedProducts = useMemo(() => {
+    return catalogProducts.filter((product) => product.highlighted || product.featured).slice(0, 6);
+  }, [catalogProducts]);
   const lowStockProducts = useMemo(() => {
     return catalogProducts.filter((product) => product.stock <= stockThreshold);
   }, [catalogProducts, stockThreshold]);
@@ -185,6 +188,37 @@ function AdminOverviewPage() {
           )}
         </article>
 
+        <article className="admin-card">
+          <div className="admin-card-title">
+            <div>
+              <span className="admin-card-kicker">Merchandising</span>
+              <h2>Productos destacados activos</h2>
+            </div>
+            <Link to="/admin/productos">Administrar destacados</Link>
+          </div>
+          {!highlightedProducts.length ? (
+            <AdminEmptyState
+              compact
+              title="Todavia no marcaste productos destacados"
+              description="Activa la columna destacado en productos para curar mejor la home y los bloques comerciales."
+            />
+          ) : (
+            <ul className="admin-simple-list">
+              {highlightedProducts.map((product) => (
+                <li key={product.id}>
+                  <div>
+                    <b>{product.name}</b>
+                    <small>{product.category}</small>
+                  </div>
+                  <b>{formatCurrency(product.price)}</b>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      </section>
+
+      <section className="admin-two-col">
         <article className="admin-card">
           <div className="admin-card-title">
             <div>

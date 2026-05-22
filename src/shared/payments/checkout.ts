@@ -1,4 +1,5 @@
 import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules.ts";
+import { normalizeCouponCode } from "./coupons.ts";
 
 export const PAYMENT_METHODS = {
   mercadoPago: "mercadopago",
@@ -17,6 +18,7 @@ export type CheckoutItemInput = {
 export type CheckoutPayload = {
   orderNumber?: string;
   paymentMethod?: string;
+  couponCode?: string;
   customer?: {
     name?: string;
     phone?: string;
@@ -59,6 +61,7 @@ export type ValidatedCheckoutPayload = {
   customerPhone: string;
   customerEmail: string;
   paymentMethod: string;
+  couponCode: string;
   items: NormalizedOrderItem[];
   delivery: {
     type: string;
@@ -211,6 +214,7 @@ export function validateNewCheckoutPayload(payload: CheckoutPayload): ValidatedC
   const customerPhone = normalizeText(payload.customer?.phone);
   const customerEmail = normalizeText(payload.customer?.email).toLowerCase();
   const paymentMethod = normalizeText(payload.paymentMethod).toLowerCase();
+  const couponCode = normalizeCouponCode(payload.couponCode);
   const items = buildOrderItems(payload.items);
   const delivery = buildShippingAddress(payload.delivery);
 
@@ -269,6 +273,7 @@ export function validateNewCheckoutPayload(payload: CheckoutPayload): ValidatedC
     customerPhone,
     customerEmail,
     paymentMethod,
+    couponCode,
     items,
     delivery,
     totals: {

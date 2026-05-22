@@ -15,6 +15,11 @@ import {
   validateNewCheckoutPayload,
   type CheckoutPayload,
 } from "../../../src/shared/payments/checkout.ts";
+import {
+  getBaseSubtotalFromOrderItems,
+  getEffectiveSubtotalFromOrderItems,
+} from "../../../src/shared/payments/coupons.ts";
+import { buildCouponUsagePayload, resolveCouponForCheckout } from "../_shared/coupons.ts";
 
 const ORDER_SELECT = `
   id,
@@ -146,6 +151,24 @@ async function createNewOrder(payload: CheckoutPayload) {
     throw new Error(validated.errors.join(" "));
   }
 
+  const subtotal = getBaseSubtotalFromOrderItems(validated.items);
+  const effectiveSubtotal = getEffectiveSubtotalFromOrderItems(validated.items);
+  const shippingCost = validated.totals.shipping;
+  const productDiscount = Number(Math.max(0, subtotal - effectiveSubtotal).toFixed(2));
+  const couponResolution = await resolveCouponForCheckout({
+    code: validated.couponCode,
+    orderAmount: effectiveSubtotal,
+    shippingCost,
+  });
+
+  if (!couponResolution.ok) {
+    throw new Error(couponResolution.error || "No pudimos validar el cupon aplicado.");
+  }
+
+  const couponDiscount = couponResolution.discountAmount;
+  const totalDiscount = Number((productDiscount + couponDiscount).toFixed(2));
+  const totalAmount = Number(Math.max(0, effectiveSubtotal + shippingCost - couponDiscount).toFixed(2));
+
   const orderInsert = {
     customer_name: validated.customerName,
     customer_email: validated.customerEmail,
@@ -153,10 +176,10 @@ async function createNewOrder(payload: CheckoutPayload) {
     shipping_type: mapShippingType(validated.delivery.type || "delivery"),
     shipping_address_json: validated.delivery,
     notes: validated.observation || null,
-    subtotal: validated.totals.subtotal,
-    discount: validated.totals.discount,
-    shipping_cost: validated.totals.shipping,
-    total: validated.totals.total,
+    subtotal,
+    discount: totalDiscount,
+    shipping_cost: shippingCost,
+    total: totalAmount,
     status: "pending",
     payment_status: "pending",
   };
@@ -183,6 +206,23 @@ async function createNewOrder(payload: CheckoutPayload) {
     throw new Error(itemsError.message || "No pudimos guardar los productos del pedido.");
   }
 
+  if (couponResolution.coupon && couponDiscount > 0) {
+    const { error: couponUsageError } = await supabase
+      .from("coupon_usages")
+      .insert(
+        buildCouponUsagePayload({
+          coupon: couponResolution.coupon,
+          orderId: orderRow.id,
+          discountAmount: couponDiscount,
+        }),
+      );
+
+    if (couponUsageError) {
+      await supabase.from("orders").delete().eq("id", orderRow.id);
+      throw new Error(couponUsageError.message || "No pudimos registrar el uso del cupon.");
+    }
+  }
+
   const paymentPayload = {
     order_id: orderRow.id,
     provider:
@@ -190,11 +230,13 @@ async function createNewOrder(payload: CheckoutPayload) {
     preference_id: null,
     payment_id: null,
     external_reference: orderRow.order_number,
-    amount: validated.totals.total,
+    amount: totalAmount,
     status: "pending",
     payment_method: validated.paymentMethod,
     payload: {
       source: "web_checkout",
+      coupon_code: validated.couponCode || null,
+      coupon_discount: couponDiscount,
       created_at: new Date().toISOString(),
     },
   };

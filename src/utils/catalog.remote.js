@@ -1,5 +1,11 @@
 import { supabase } from "../lib/supabase";
 import { readCatalogProducts, saveCatalogProducts } from "./catalogStore";
+import {
+  CATALOG_IMAGE_PLACEHOLDER,
+  isCatalogPlaceholderImage,
+  resolveCatalogMedia,
+  sanitizeCatalogGallery,
+} from "./catalogMedia";
 
 export const CATALOG_PRODUCT_SELECT = `
   id,
@@ -38,8 +44,6 @@ export const CATALOG_PRODUCT_SELECT = `
   )
 `;
 
-const FALLBACK_IMAGE = "/assets/products/creatina-300-bag.jpg";
-
 function requireSupabase() {
   if (!supabase) {
     throw new Error(
@@ -67,6 +71,10 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 80);
+}
+
+function normalizeEntityName(name) {
+  return normalizeText(name);
 }
 
 function isUuid(value) {
@@ -97,15 +105,14 @@ function normalizeGalleryImages(images, productName) {
     ? [...images].sort((left, right) => (left?.sort_order || 0) - (right?.sort_order || 0))
     : [];
 
-  const gallery = sorted
-    .map((image) => normalizeText(image?.public_url || image?.storage_path))
-    .filter(Boolean);
-
-  const image = gallery[0] || FALLBACK_IMAGE;
+  const gallery = sanitizeCatalogGallery(
+    sorted.map((image) => normalizeText(image?.public_url || image?.storage_path)),
+  );
+  const media = resolveCatalogMedia(gallery[0], gallery);
 
   return {
-    image,
-    gallery: gallery.length ? gallery : [image],
+    image: media.image,
+    gallery: media.gallery,
     altText: normalizeText(sorted[0]?.alt_text) || normalizeText(productName),
   };
 }
@@ -156,7 +163,7 @@ async function ensureNamedEntities(table, names) {
   const client = requireSupabase();
   const entries = [...new Map(
     names
-      .map((name) => normalizeText(name))
+      .map((name) => normalizeEntityName(name))
       .filter(Boolean)
       .map((name) => [slugify(name), { name, slug: slugify(name) }]),
   ).values()];
@@ -200,15 +207,15 @@ async function ensureNamedEntities(table, names) {
   }
 
   return new Map(
-    [...(existing || []), ...inserted].map((item) => [normalizeText(item.name).toLowerCase(), item.id]),
+    [...(existing || []), ...inserted].map((item) => [slugify(item.name), item.id]),
   );
 }
 
 function buildProductPayload(product, categoryIdMap, brandIdMap) {
   const normalizedName = normalizeText(product?.name);
   const description = normalizeText(product?.description);
-  const categoryKey = normalizeText(product?.category).toLowerCase();
-  const brandKey = normalizeText(product?.brand).toLowerCase();
+  const categoryKey = slugify(product?.category);
+  const brandKey = slugify(product?.brand);
 
   return {
     category_id: categoryIdMap.get(categoryKey) || null,
@@ -237,12 +244,18 @@ function buildProductPayload(product, categoryIdMap, brandIdMap) {
 }
 
 function getProductImagesPayload(productId, product) {
-  const gallery = Array.isArray(product?.gallery) && product.gallery.length
-    ? product.gallery
-    : [product?.image || FALLBACK_IMAGE];
+  const gallery = sanitizeCatalogGallery(product?.gallery);
+  const standaloneImage = normalizeText(product?.image);
+  const normalizedImages = gallery.length
+    ? gallery
+    : standaloneImage &&
+        standaloneImage !== CATALOG_IMAGE_PLACEHOLDER &&
+        !isCatalogPlaceholderImage(standaloneImage)
+      ? [standaloneImage]
+      : [];
 
-  return gallery
-    .map((image, index) => normalizeText(image))
+  return normalizedImages
+    .map((image) => normalizeText(image))
     .filter(Boolean)
     .map((image, index) => ({
       product_id: productId,
@@ -294,6 +307,33 @@ export async function fetchCatalogFromSupabase() {
   }
 
   return normalized;
+}
+
+async function fetchNamedEntitiesFromSupabase(table) {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from(table)
+    .select("id, name, slug, is_active")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message || `No pudimos cargar ${table} desde la base.`);
+  }
+
+  return (data || []).map((row) => ({
+    id: normalizeText(row?.id),
+    name: normalizeEntityName(row?.name),
+    slug: normalizeText(row?.slug),
+  }));
+}
+
+export async function fetchCatalogCategoriesFromSupabase() {
+  return fetchNamedEntitiesFromSupabase("categories");
+}
+
+export async function fetchCatalogBrandsFromSupabase() {
+  return fetchNamedEntitiesFromSupabase("brands");
 }
 
 export async function saveAdminCatalogProducts(products) {

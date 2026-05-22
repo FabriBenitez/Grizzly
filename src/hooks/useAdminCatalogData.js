@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthSupabase } from "../shared/auth/AuthSupabaseProvider";
-import { saveCatalogProducts } from "../utils/catalogStore";
+import {
+  getCatalogBrands,
+  getCatalogCategories,
+  saveCatalogProducts,
+} from "../utils/catalogStore";
 import {
   fetchAdminCatalogFromSupabase,
+  fetchCatalogBrandsFromSupabase,
+  fetchCatalogCategoriesFromSupabase,
   readLocalAdminCatalog,
   saveAdminCatalogProducts,
   uploadCatalogImages,
 } from "../utils/catalog.remote";
 
 function loadLocalCatalog() {
+  const products = readLocalAdminCatalog();
   return {
-    products: readLocalAdminCatalog(),
+    products,
+    categories: getCatalogCategories(products),
+    brands: getCatalogBrands(products),
     useDemoData: true,
   };
 }
@@ -18,6 +27,8 @@ function loadLocalCatalog() {
 export function useAdminCatalogData() {
   const { cargando, esAdmin, puedeIniciarSesion } = useAuthSupabase();
   const [products, setProducts] = useState(() => readLocalAdminCatalog());
+  const [categories, setCategories] = useState(() => getCatalogCategories(readLocalAdminCatalog()));
+  const [brands, setBrands] = useState(() => getCatalogBrands(readLocalAdminCatalog()));
   const [useDemoData, setUseDemoData] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,6 +42,8 @@ export function useAdminCatalogData() {
     if (!puedeIniciarSesion || !esAdmin) {
       const local = loadLocalCatalog();
       setProducts(local.products);
+      setCategories(local.categories);
+      setBrands(local.brands);
       setUseDemoData(local.useDemoData);
       setLoading(false);
       setError("");
@@ -40,7 +53,11 @@ export function useAdminCatalogData() {
     setLoading(true);
 
     try {
-      const remoteProducts = await fetchAdminCatalogFromSupabase();
+      const [remoteProducts, remoteCategories, remoteBrands] = await Promise.all([
+        fetchAdminCatalogFromSupabase(),
+        fetchCatalogCategoriesFromSupabase(),
+        fetchCatalogBrandsFromSupabase(),
+      ]);
 
       if (remoteProducts.length) {
         setProducts(remoteProducts);
@@ -51,10 +68,21 @@ export function useAdminCatalogData() {
         setUseDemoData(local.useDemoData);
       }
 
+      setCategories(
+        remoteCategories.length
+          ? remoteCategories.map((category) => category.name)
+          : getCatalogCategories(remoteProducts),
+      );
+      setBrands(
+        remoteBrands.length ? remoteBrands.map((brand) => brand.name) : getCatalogBrands(remoteProducts),
+      );
+
       setError("");
     } catch (loadError) {
       const local = loadLocalCatalog();
       setProducts(local.products);
+      setCategories(local.categories);
+      setBrands(local.brands);
       setUseDemoData(local.useDemoData);
       setError(
         loadError instanceof Error
@@ -86,6 +114,8 @@ export function useAdminCatalogData() {
       try {
         const saved = await saveAdminCatalogProducts(safeProducts);
         setProducts(saved);
+        setCategories(getCatalogCategories(saved));
+        setBrands(getCatalogBrands(saved));
         setUseDemoData(false);
         setError("");
         return saved;
@@ -137,6 +167,8 @@ export function useAdminCatalogData() {
   return useMemo(
     () => ({
       products,
+      categories,
+      brands,
       setProducts,
       useDemoData,
       loading,
@@ -146,6 +178,17 @@ export function useAdminCatalogData() {
       saveProducts,
       uploadImages,
     }),
-    [error, loadProducts, loading, products, saveProducts, saving, uploadImages, useDemoData],
+    [
+      brands,
+      categories,
+      error,
+      loadProducts,
+      loading,
+      products,
+      saveProducts,
+      saving,
+      uploadImages,
+      useDemoData,
+    ],
   );
 }

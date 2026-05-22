@@ -4,26 +4,54 @@ import {
   objectives as baseObjectives,
   products as baseProducts,
 } from "../data/products";
+import { resolveCatalogMedia } from "./catalogMedia";
 
 export const CATALOG_PRODUCTS_STORAGE_KEY = "grizzly_catalog_products_mp_test_v1";
 export const CATALOG_PRODUCTS_EVENT = "grizzly:catalog-products-updated";
 
+function normalizeCatalogText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getUniqueCatalogValues(source, field) {
+  const items = Array.isArray(source) && source.length ? source : createCatalogSeed();
+  const unique = new Map();
+
+  items.forEach((item) => {
+    const value = normalizeCatalogText(item?.[field]);
+    if (!value) {
+      return;
+    }
+
+    const key = value.toLocaleLowerCase("es-AR");
+    if (!unique.has(key)) {
+      unique.set(key, value);
+    }
+  });
+
+  return [...unique.values()].sort((left, right) =>
+    left.localeCompare(right, "es", { sensitivity: "base" }),
+  );
+}
+
 function normalizeCatalogProduct(product, index, fallback = {}) {
   const merged = { ...fallback, ...product };
-  const image =
-    merged.image || merged.gallery?.[0] || fallback.image || "/assets/products/creatina-300-bag.jpg";
-  const gallery = Array.isArray(merged.gallery) && merged.gallery.length ? merged.gallery : [image];
+  const media = resolveCatalogMedia(product?.image, product?.gallery);
 
   return {
     ...merged,
     sku: merged.sku || fallback.sku || `SKU-${String(index + 1).padStart(4, "0")}`,
+    name: normalizeCatalogText(merged.name) || normalizeCatalogText(fallback.name),
+    brand: normalizeCatalogText(merged.brand) || normalizeCatalogText(fallback.brand),
+    category: normalizeCatalogText(merged.category) || normalizeCatalogText(fallback.category),
+    objective: normalizeCatalogText(merged.objective) || normalizeCatalogText(fallback.objective),
     active: typeof merged.active === "boolean" ? merged.active : true,
     highlighted:
       typeof merged.highlighted === "boolean"
         ? merged.highlighted
         : Boolean(merged.featured || fallback.highlighted),
-    image,
-    gallery,
+    image: media.image,
+    gallery: media.gallery,
     description:
       merged.description?.trim() ||
       fallback.description ||
@@ -51,10 +79,7 @@ export function readCatalogProducts() {
       return createCatalogSeed();
     }
 
-    return parsed.map((product, index) => {
-      const fallback = baseProducts.find((item) => item.id === product.id) || {};
-      return normalizeCatalogProduct(product, index, fallback);
-    });
+    return parsed.map((product, index) => normalizeCatalogProduct(product, index));
   } catch {
     return createCatalogSeed();
   }
@@ -66,10 +91,7 @@ export function saveCatalogProducts(products) {
   }
 
   try {
-    const normalized = products.map((product, index) => {
-      const fallback = baseProducts.find((item) => item.id === product.id) || {};
-      return normalizeCatalogProduct(product, index, fallback);
-    });
+    const normalized = products.map((product, index) => normalizeCatalogProduct(product, index));
 
     window.localStorage.setItem(CATALOG_PRODUCTS_STORAGE_KEY, JSON.stringify(normalized));
     window.dispatchEvent(new window.Event(CATALOG_PRODUCTS_EVENT));
@@ -79,18 +101,15 @@ export function saveCatalogProducts(products) {
 }
 
 export function getCatalogCategories(products) {
-  const source = products?.length ? products : createCatalogSeed();
-  return [...new Set(source.map((product) => product.category).filter(Boolean))];
+  return getUniqueCatalogValues(products, "category");
 }
 
 export function getCatalogBrands(products) {
-  const source = products?.length ? products : createCatalogSeed();
-  return [...new Set(source.map((product) => product.brand).filter(Boolean))];
+  return getUniqueCatalogValues(products, "brand");
 }
 
 export function getCatalogObjectives(products) {
-  const source = products?.length ? products : createCatalogSeed();
-  return [...new Set(source.map((product) => product.objective).filter(Boolean))];
+  return getUniqueCatalogValues(products, "objective");
 }
 
 export const catalogSeedMeta = {

@@ -12,6 +12,7 @@ import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import { getRelatedProducts, getStockState } from "../shared/catalog/productDiscovery";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
+import { CATALOG_IMAGE_PLACEHOLDER } from "../utils/catalogMedia";
 import ProductCard from "../components/ui/ProductCard";
 
 function ProductPage() {
@@ -19,14 +20,16 @@ function ProductPage() {
   const { addToCart } = useCart();
   const products = useCatalogProducts();
   const product = products.find((item) => item.slug === slug);
-  const [mainImage, setMainImage] = useState(product?.gallery?.[0] || "");
+  const [mainImage, setMainImage] = useState(
+    product?.gallery?.[0] || product?.image || CATALOG_IMAGE_PLACEHOLDER,
+  );
   const [quantity, setQuantity] = useState(1);
   const [postalCode, setPostalCode] = useState("");
   const [shippingMessage, setShippingMessage] = useState("");
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    setMainImage(product?.gallery?.[0] || "");
+    setMainImage(product?.gallery?.[0] || product?.image || CATALOG_IMAGE_PLACEHOLDER);
     setQuantity(1);
     setPostalCode("");
     setShippingMessage("");
@@ -52,6 +55,7 @@ function ProductPage() {
   const effectivePrice = getEffectivePrice(product);
   const viewerCount = 200 + (product.reviews * 7) % 800;
   const galleryCount = product.gallery?.length || 0;
+  const galleryImages = galleryCount ? product.gallery : [product.image || CATALOG_IMAGE_PLACEHOLDER];
   const stockState = getStockState(product.stock);
 
   const handleQuantity = (delta) => {
@@ -59,6 +63,10 @@ function ProductPage() {
   };
 
   const handleAddToCart = () => {
+    if (product.stock <= 0) {
+      return;
+    }
+
     addToCart(product, quantity);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
@@ -94,7 +102,7 @@ function ProductPage() {
         <div className="product-gallery-shell">
           <div className="product-gallery">
             <div className="thumb-list">
-              {product.gallery.map((image, index) => (
+              {galleryImages.map((image, index) => (
                 <button
                   key={image}
                   type="button"
@@ -109,7 +117,7 @@ function ProductPage() {
 
             <div className="main-image">
               {product.promo && <span className="product-hero-tag">Promo activa</span>}
-              <img src={mainImage} alt={product.name} />
+              <img src={mainImage || CATALOG_IMAGE_PLACEHOLDER} alt={product.name} />
             </div>
           </div>
 
@@ -178,8 +186,13 @@ function ProductPage() {
               </div>
             </div>
 
-            <button type="button" className="btn-primary full product-cta" onClick={handleAddToCart}>
-              AGREGAR AL CARRITO
+            <button
+              type="button"
+              className="btn-primary full product-cta"
+              onClick={handleAddToCart}
+              disabled={product.stock <= 0}
+            >
+              {product.stock <= 0 ? "SIN STOCK" : "AGREGAR AL CARRITO"}
             </button>
             {added && <p className="feedback-ok">Producto agregado al carrito.</p>}
 

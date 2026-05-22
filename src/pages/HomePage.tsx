@@ -6,10 +6,12 @@ import SectionTitle from "../components/ui/SectionTitle";
 import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import {
   getComboProducts,
+  getHighlightedProducts,
   getMostSoldProducts,
   getPromoProducts,
 } from "../shared/catalog/productDiscovery";
-import { getActiveHeroSlides } from "../utils/heroSlides";
+import { fetchHeroSlidesFromSupabase } from "../utils/hero.remote";
+import { getActiveDefaultHeroSlides } from "../utils/heroSlides";
 import SeoPagina from "../shared/seo/SeoPagina";
 import type { DiapositivaHero } from "../tipos/hero";
 import estilos from "./HomePage.module.scss";
@@ -30,13 +32,35 @@ const categoriasDestacadas = [
 function HomePage() {
   const productos = useCatalogProducts();
   const [indiceActivo, setIndiceActivo] = useState(0);
-  const [diapositivasHero] = useState<DiapositivaHero[]>(
-    () => getActiveHeroSlides() as DiapositivaHero[],
+  const [diapositivasHero, setDiapositivasHero] = useState<DiapositivaHero[]>(
+    () => getActiveDefaultHeroSlides() as DiapositivaHero[],
   );
 
   const promociones = useMemo(() => getPromoProducts(productos, 6), [productos]);
   const combos = useMemo(() => getComboProducts(productos, 6), [productos]);
+  const destacados = useMemo(() => getHighlightedProducts(productos, 6), [productos]);
   const masVendidos = useMemo(() => getMostSoldProducts(productos, 6), [productos]);
+
+  useEffect(() => {
+    let activo = true;
+
+    const cargarHeroReal = async () => {
+      try {
+        const remoteSlides = (await fetchHeroSlidesFromSupabase()) as DiapositivaHero[];
+        if (activo && remoteSlides.length) {
+          setDiapositivasHero(remoteSlides);
+        }
+      } catch {
+        // Si falla la carga remota, mantenemos el fallback visual local.
+      }
+    };
+
+    cargarHeroReal();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (diapositivasHero.length <= 1) {
@@ -52,6 +76,7 @@ function HomePage() {
 
   const diapositivaActual = diapositivasHero[indiceActivo] || diapositivasHero[0];
   const mostrarOverlayHero = diapositivaActual?.showOverlay !== false;
+  const usaTituloUnificado = Boolean(diapositivaActual?.title?.trim());
 
   const mostrarPromoAnterior = () => {
     setIndiceActivo((actual) => (actual - 1 + diapositivasHero.length) % diapositivasHero.length);
@@ -113,9 +138,17 @@ function HomePage() {
               <header key={diapositivaActual.id} className="hero-carousel-copy hero-carousel-copy-enter">
                 <p className="hero-carousel-kicker">{diapositivaActual.kicker}</p>
                 <h1>
-                  <span>{diapositivaActual.titleLead}</span>
-                  <strong>{diapositivaActual.titleHighlight}</strong>
-                  <em>{diapositivaActual.titleTail}</em>
+                  {usaTituloUnificado ? (
+                    <strong>{diapositivaActual.title}</strong>
+                  ) : (
+                    <>
+                      {diapositivaActual.titleLead ? <span>{diapositivaActual.titleLead}</span> : null}
+                      {diapositivaActual.titleHighlight ? (
+                        <strong>{diapositivaActual.titleHighlight}</strong>
+                      ) : null}
+                      {diapositivaActual.titleTail ? <em>{diapositivaActual.titleTail}</em> : null}
+                    </>
+                  )}
                 </h1>
                 <p className="hero-carousel-description">{diapositivaActual.description}</p>
 
@@ -126,9 +159,15 @@ function HomePage() {
                 </div>
 
                 <div className={estilos["inicio__hero-acciones"]}>
-                  <Link to="/catalogo" className="btn-primary">
-                    Ver productos
-                  </Link>
+                  {diapositivaActual.ctaLabel && diapositivaActual.ctaHref ? (
+                    <Link to={diapositivaActual.ctaHref} className="btn-primary">
+                      {diapositivaActual.ctaLabel}
+                    </Link>
+                  ) : (
+                    <Link to="/catalogo" className="btn-primary">
+                      Ver productos
+                    </Link>
+                  )}
                   <Link to="/promos" className="btn-outline hero-outline-light">
                     Ver promos
                   </Link>
@@ -173,6 +212,20 @@ function HomePage() {
         />
         <div className="product-grid six-col">
           {promociones.map((producto, index) => (
+            <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
+          ))}
+        </div>
+      </section>
+
+      <section className="container section-space" aria-labelledby="seleccion-admin">
+        <SectionTitle
+          id="seleccion-admin"
+          eyebrow="Curaduria Grizzly"
+          title="Seleccion destacada por el equipo"
+          subtitle="Productos marcados desde el panel para priorizar lanzamientos, margen o rotacion."
+        />
+        <div className="product-grid six-col">
+          {destacados.map((producto, index) => (
             <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
           ))}
         </div>
@@ -257,6 +310,11 @@ function HomePage() {
         <article className={estilos["inicio__beneficio"]}>
           <h3>Seguimiento de pedido</h3>
           <p>Controla estado: pendiente, pago confirmado, preparacion, envio o retiro.</p>
+        </article>
+
+        <article className={estilos["inicio__beneficio"]}>
+          <h3>Seleccion comercial editable</h3>
+          <p>Los productos destacados de la home se administran desde el panel para mover el catalogo.</p>
         </article>
 
         <article className={estilos["inicio__beneficio"]}>

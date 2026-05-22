@@ -10,6 +10,14 @@ import {
 } from "lucide-react";
 import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
 import { formatCurrency } from "../../utils/currency";
+import {
+  CATALOG_IMAGE_PLACEHOLDER,
+  isCatalogPlaceholderImage,
+} from "../../utils/catalogMedia";
+import {
+  buildCatalogImportSummary,
+  parseCatalogImportFile,
+} from "../../utils/catalogImport";
 
 const excelColumns = [
   "SKU",
@@ -55,11 +63,19 @@ function moveItem(array, fromIndex, toIndex) {
   return next;
 }
 
-const FALLBACK_PRODUCT_IMAGE = "/assets/products/creatina-300-bag.jpg";
-
 function AdminProductsPage() {
-  const { products, setProducts, useDemoData, loading, saving, error, saveProducts, uploadImages } =
-    useAdminCatalogData();
+  const {
+    products,
+    categories,
+    brands,
+    setProducts,
+    useDemoData,
+    loading,
+    saving,
+    error,
+    saveProducts,
+    uploadImages,
+  } = useAdminCatalogData();
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState({
     sku: "",
@@ -74,6 +90,14 @@ function AdminProductsPage() {
   const [message, setMessage] = useState("");
   const [excelFileName, setExcelFileName] = useState("");
   const [excelMessage, setExcelMessage] = useState("");
+  const [excelImportRows, setExcelImportRows] = useState([]);
+  const [excelImportSummary, setExcelImportSummary] = useState({
+    total: 0,
+    ready: 0,
+    duplicates: 0,
+    errors: 0,
+  });
+  const [importingExcel, setImportingExcel] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [galleryUrl, setGalleryUrl] = useState("");
   const [galleryMessage, setGalleryMessage] = useState("");
@@ -131,7 +155,6 @@ function AdminProductsPage() {
     }
 
     const id = `demo_${Date.now()}`;
-    const image = FALLBACK_PRODUCT_IMAGE;
     const nextSku = draft.sku.trim();
     const nextProducts = [
       {
@@ -154,8 +177,8 @@ function AdminProductsPage() {
         combo: false,
         active: true,
         highlighted: false,
-        image,
-        gallery: [image],
+        image: CATALOG_IMAGE_PLACEHOLDER,
+        gallery: [],
         description: draft.description.trim() || "Producto creado desde el panel admin.",
       },
       ...products,
@@ -184,16 +207,73 @@ function AdminProductsPage() {
     }
   };
 
-  const handleExcelFileChange = (event) => {
+  const handleExcelFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    setExcelFileName(file.name);
-    setExcelMessage(
-      "Vista lista: el siguiente paso es parsear el Excel, validar columnas y crear solo productos nuevos sobre Supabase.",
-    );
+    try {
+      const parsed = await parseCatalogImportFile(file, products);
+      setExcelFileName(file.name);
+      setExcelImportRows(parsed.rows);
+      setExcelImportSummary(parsed.summary);
+      setExcelMessage(
+        parsed.summary.ready
+          ? `Archivo listo: ${parsed.summary.ready} productos nuevos para importar.`
+          : "Archivo procesado. Revisa duplicados o errores antes de continuar.",
+      );
+    } catch (parseError) {
+      setExcelFileName(file.name);
+      setExcelImportRows([]);
+      setExcelImportSummary({
+        total: 0,
+        ready: 0,
+        duplicates: 0,
+        errors: 0,
+      });
+      setExcelMessage(
+        parseError instanceof Error
+          ? parseError.message
+          : "No pudimos leer el archivo seleccionado.",
+      );
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const importExcelProducts = async () => {
+    const readyProducts = excelImportRows
+      .filter((row) => row.status === "ready" && row.product)
+      .map((row) => row.product);
+
+    if (!readyProducts.length) {
+      setExcelMessage("No hay productos nuevos listos para importar en este archivo.");
+      return;
+    }
+
+    const nextProducts = [...readyProducts, ...products];
+    setImportingExcel(true);
+
+    try {
+      const saved = await saveProducts(nextProducts);
+      const importedSkus = new Set(readyProducts.map((product) => product.sku));
+      const importedCount = saved.filter((product) => importedSkus.has(product.sku)).length;
+      setSelectedProductId(saved[0]?.id || "");
+      setExcelMessage(`Importacion completa: ${importedCount} productos nuevos guardados.`);
+      setExcelFileName("");
+      setExcelImportRows([]);
+      setExcelImportSummary({
+        total: 0,
+        ready: 0,
+        duplicates: 0,
+        errors: 0,
+      });
+    } catch {
+      setExcelMessage("No pudimos persistir la importacion en la base.");
+    } finally {
+      setImportingExcel(false);
+    }
   };
 
   const appendImagesToProduct = (productId, newImages) => {
@@ -206,7 +286,10 @@ function AdminProductsPage() {
         const nextGallery = [...(product.gallery || []), ...newImages];
         return {
           ...product,
-          image: product.image || nextGallery[0],
+          image:
+            product.image && !isCatalogPlaceholderImage(product.image)
+              ? product.image
+              : nextGallery[0] || CATALOG_IMAGE_PLACEHOLDER,
           gallery: nextGallery,
         };
       }),
@@ -256,11 +339,11 @@ function AdminProductsPage() {
         }
 
         const nextGallery = product.gallery.filter((_, index) => index !== imageIndex);
-        const nextImage = nextGallery[0] || FALLBACK_PRODUCT_IMAGE;
+        const nextImage = nextGallery[0] || CATALOG_IMAGE_PLACEHOLDER;
         return {
           ...product,
           image: nextImage,
-          gallery: nextGallery.length ? nextGallery : [nextImage],
+          gallery: nextGallery,
         };
       }),
     );
@@ -286,7 +369,7 @@ function AdminProductsPage() {
         const nextGallery = moveItem(product.gallery, imageIndex, nextIndex);
         return {
           ...product,
-          image: nextGallery[0],
+          image: nextGallery[0] || CATALOG_IMAGE_PLACEHOLDER,
           gallery: nextGallery,
         };
       }),
@@ -306,6 +389,12 @@ function AdminProductsPage() {
         <div className="products-admin-header-meta">
           <span>
             <strong>{products.length}</strong> productos editables
+          </span>
+          <span>
+            <strong>{categories.length}</strong> categorias reales
+          </span>
+          <span>
+            <strong>{brands.length}</strong> marcas reales
           </span>
           <span>
             <strong>{visibleProducts.length}</strong> visibles en esta vista
@@ -368,10 +457,27 @@ function AdminProductsPage() {
             productos existentes.
           </p>
           {excelFileName && <p className="products-file-pill">{excelFileName}</p>}
+          {excelImportSummary.total > 0 ? (
+            <div className="products-import-summary">
+              <span>{excelImportSummary.total} filas leidas</span>
+              <span>{excelImportSummary.ready} listas</span>
+              <span>{excelImportSummary.duplicates} duplicadas</span>
+              <span>{excelImportSummary.errors} con error</span>
+            </div>
+          ) : null}
           <div className="excel-columns-grid products-excel-columns-grid">
             {excelColumns.map((column) => (
               <span key={column}>{column}</span>
             ))}
+          </div>
+          <div className="products-import-actions">
+            <button
+              type="button"
+              onClick={importExcelProducts}
+              disabled={importingExcel || saving || loading || !excelImportSummary.ready}
+            >
+              {importingExcel ? "Importando..." : "Importar productos nuevos"}
+            </button>
           </div>
           {excelMessage && <p className="admin-message">{excelMessage}</p>}
         </article>
@@ -387,7 +493,9 @@ function AdminProductsPage() {
             </span>
           </div>
           <p className="products-helper-copy">
-            Usa estas columnas para armar el archivo y acelerar la carga del catalogo.
+            {excelImportRows.length
+              ? "Preview real del archivo cargado, con estado por fila antes de importar."
+              : "Usa estas columnas para armar el archivo y acelerar la carga del catalogo."}
           </p>
           <div className="admin-table-wrap products-excel-preview-wrap">
             <table className="admin-table products-excel-preview-table">
@@ -396,11 +504,13 @@ function AdminProductsPage() {
                   {excelColumns.map((column) => (
                     <th key={column}>{column}</th>
                   ))}
+                  <th>Estado</th>
+                  <th>Observaciones</th>
                 </tr>
               </thead>
               <tbody>
-                {excelPreviewRows.map((row) => (
-                  <tr key={row.sku}>
+                {(excelImportRows.length ? excelImportRows : excelPreviewRows).map((row) => (
+                  <tr key={row.sku || `preview-${row.name}`}>
                     <td>{row.sku}</td>
                     <td>{row.name}</td>
                     <td>{row.category}</td>
@@ -410,6 +520,24 @@ function AdminProductsPage() {
                     <td>{row.stock}</td>
                     <td>{row.image}</td>
                     <td>{row.description}</td>
+                    <td>
+                      {"status" in row ? (
+                        <span className={`products-import-status is-${row.status}`}>
+                          {row.status === "ready"
+                            ? "Lista"
+                            : row.status === "duplicate"
+                              ? "Duplicada"
+                              : "Error"}
+                        </span>
+                      ) : (
+                        <span className="products-import-status is-sample">Ejemplo</span>
+                      )}
+                    </td>
+                    <td>
+                      {"issues" in row && row.issues?.length
+                        ? row.issues.join(" ")
+                        : "Fila valida para crear productos nuevos."}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -462,7 +590,7 @@ function AdminProductsPage() {
                 <tr key={product.id}>
                   <td>
                     <div className="table-product products-table-product">
-                      <img src={product.image} alt={product.name} />
+                      <img src={product.image || CATALOG_IMAGE_PLACEHOLDER} alt={product.name} />
                       <div>
                         <b>{product.name}</b>
                         <small>{product.brand}</small>
@@ -558,6 +686,10 @@ function AdminProductsPage() {
           <p className="products-helper-copy">
             Crea productos en segundos para completar el catalogo y publicarlos directamente.
           </p>
+          <p className="products-helper-copy">
+            Usa las sugerencias de categoria y marca para mantener el catalogo consistente en toda
+            la tienda.
+          </p>
           <form
             className="admin-inline-form product-inline-form products-create-form"
             onSubmit={createProduct}
@@ -577,12 +709,14 @@ function AdminProductsPage() {
             <input
               type="text"
               placeholder="Categoria"
+              list="catalog-category-options"
               value={draft.category}
               onChange={(event) => setDraft((prev) => ({ ...prev, category: event.target.value }))}
             />
             <input
               type="text"
               placeholder="Marca"
+              list="catalog-brand-options"
               value={draft.brand}
               onChange={(event) => setDraft((prev) => ({ ...prev, brand: event.target.value }))}
             />
@@ -617,6 +751,16 @@ function AdminProductsPage() {
               {saving ? "Guardando..." : "Crear producto"}
             </button>
           </form>
+          <datalist id="catalog-category-options">
+            {categories.map((category) => (
+              <option key={category} value={category} />
+            ))}
+          </datalist>
+          <datalist id="catalog-brand-options">
+            {brands.map((brand) => (
+              <option key={brand} value={brand} />
+            ))}
+          </datalist>
           {message && <p className="admin-message">{message}</p>}
         </article>
 
@@ -682,6 +826,15 @@ function AdminProductsPage() {
             </button>
           </div>
           <ul className="gallery-admin-list products-gallery-list">
+            {!selectedProduct?.gallery?.length ? (
+              <li>
+                <img src={selectedProduct?.image || CATALOG_IMAGE_PLACEHOLDER} alt="Placeholder del producto" />
+                <div className="products-gallery-copy">
+                  <b>Sin imagenes reales cargadas</b>
+                  <small>Sube archivos o pega URLs antes de guardar el producto.</small>
+                </div>
+              </li>
+            ) : null}
             {(selectedProduct?.gallery || []).map((image, index) => (
               <li key={`${selectedProduct?.id}-${image}-${index}`}>
                 <img src={image} alt={`${selectedProduct?.name} ${index + 1}`} />

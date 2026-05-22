@@ -84,11 +84,11 @@ describe("catalogo y descubrimiento de productos", () => {
 
     expect(seed.length).toBeGreaterThan(0);
     expect(seed.every((product) => Boolean(product.slug))).toBe(true);
-    expect(getCatalogCategories(sampleProducts)).toEqual(["Creatina", "Proteina", "Combos"]);
+    expect(getCatalogCategories(sampleProducts)).toEqual(["Combos", "Creatina", "Proteina"]);
     expect(getCatalogBrands(sampleProducts)).toEqual([
-      "Star Nutrition",
       "ENA",
       "Grizzly Labs",
+      "Star Nutrition",
     ]);
   });
 
@@ -141,8 +141,9 @@ describe("catalogo y descubrimiento de productos", () => {
 
   it("expone el stock visible con el tono correcto", () => {
     expect(getStockState(30)).toEqual({ label: "Stock disponible", tone: "ok" });
-    expect(getStockState(12)).toEqual({ label: "Ultimas unidades", tone: "warn" });
-    expect(getStockState(5)).toEqual({ label: "Stock bajo", tone: "alert" });
+    expect(getStockState(12)).toEqual({ label: "Stock bajo", tone: "warn" });
+    expect(getStockState(5)).toEqual({ label: "Ultimas unidades", tone: "alert" });
+    expect(getStockState(0)).toEqual({ label: "Sin stock", tone: "alert" });
   });
 
   it("sugiere productos relacionados de la misma categoria sin repetir el actual", () => {

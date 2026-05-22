@@ -8,7 +8,7 @@ export function CartProvider({ children }) {
   const [items, setItems] = useLocalStorage("grizzly_cart_mp_test_v1", []);
 
   const addToCart = (product, quantity = 1) => {
-    if (quantity <= 0) {
+    if (quantity <= 0 || Number(product?.stock || 0) <= 0) {
       return;
     }
 

@@ -96,6 +96,33 @@
   font-weight: 800;
 }
 
+.tarjeta-producto__stock {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.tarjeta-producto__stock--ok {
+  background: rgba(59, 133, 86, 0.12);
+  color: #2f6b46;
+}
+
+.tarjeta-producto__stock--warn {
+  background: rgba(196, 133, 48, 0.15);
+  color: #8a5a16;
+}
+
+.tarjeta-producto__stock--alert {
+  background: rgba(181, 72, 56, 0.14);
+  color: #96392d;
+}
+
 .tarjeta-producto__precios {
   display: flex;
   flex-direction: column;

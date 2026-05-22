@@ -1,646 +1,594 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  BadgeCheck,
   BadgeDollarSign,
-  Boxes,
   CalendarDays,
-  Gift,
-  ImagePlus,
-  Package2,
+  Percent,
   Tag,
+  TicketPercent,
+  Truck,
+  UserRoundCheck,
 } from "lucide-react";
-import { products } from "../../data/products";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 import { formatCurrency } from "../../utils/currency";
-
-const promotionTemplates = [
-  {
-    id: "twoforone",
-    name: "2x1",
-    type: "2x1",
-    description: "Llevas 2 unidades y pagas 1.",
-    condition: "Llevando 2, paga 1",
-    icon: Gift,
-    kind: "bundle",
-  },
-  {
-    id: "threefortwo",
-    name: "3x2",
-    type: "3x2",
-    description: "Llevas 3 unidades y pagas 2.",
-    condition: "Llevando 3, paga 2",
-    icon: Boxes,
-    kind: "bundle",
-  },
-  {
-    id: "fixedamount",
-    name: "$ menos",
-    type: "Monto fijo",
-    description: "Descuento directo por monto sobre un producto puntual.",
-    condition: "Descuento directo sobre el precio",
-    icon: BadgeDollarSign,
-    kind: "fixed",
-  },
-];
-
-const initialPromotions = [
-  {
-    id: "promo1",
-    name: "Creatinas 2x1 de lanzamiento",
-    type: "2x1",
-    condition: "Llevando 2, paga 1",
-    scopeTarget: "Creatina",
-    targetProductId: "p1",
-    discountAmount: null,
-    image: "/assets/products/combo-creatina-x3.jpg",
-    imageName: "combo-creatina-x3.jpg",
-    start: "2026-04-01",
-    end: "2026-04-30",
-    stockLimit: 80,
-    active: true,
-  },
-  {
-    id: "promo2",
-    name: "Whey 3x2 para clientes frecuentes",
-    type: "3x2",
-    condition: "Llevando 3, paga 2",
-    scopeTarget: "Proteinas whey",
-    targetProductId: "p4",
-    discountAmount: null,
-    image: "/assets/products/whey-doypack.jpg",
-    imageName: "whey-doypack.jpg",
-    start: "2026-04-05",
-    end: "2026-05-10",
-    stockLimit: null,
-    active: true,
-  },
-  {
-    id: "promo3",
-    name: "Creatina 300g con rebaja directa",
-    type: "Monto fijo",
-    condition: "$5.000 menos",
-    scopeTarget: "Creatina Star Nutrition Monohidrato 300g Bolsa",
-    targetProductId: "p1",
-    discountAmount: 5000,
-    image: "/assets/products/creatina-300-bag.jpg",
-    imageName: "creatina-300-bag.jpg",
-    start: "2026-04-12",
-    end: "2026-05-12",
-    stockLimit: 60,
-    active: true,
-  },
-];
+import {
+  deleteAdminCoupon,
+  fetchAdminCouponsFromSupabase,
+  saveAdminCoupon,
+} from "../../utils/coupons.remote";
 
 const emptyDraft = {
+  id: "",
+  code: "",
   name: "",
-  image: "",
-  imageName: "",
-  scopeTarget: "",
-  targetProductId: "",
-  discountAmount: "",
-  start: "",
-  end: "",
-  stockLimit: "",
+  description: "",
+  couponType: "percentage",
+  couponScope: "order",
+  discountValue: "",
+  minOrderTotal: "",
+  maxDiscountAmount: "",
+  usageLimit: "",
+  perUserLimit: "",
+  startsAt: "",
+  endsAt: "",
+  active: true,
 };
 
-function getTemplateDefaultImage(templateType) {
-  if (templateType === "3x2") {
-    return "/assets/products/whey-doypack.jpg";
-  }
-  if (templateType === "Monto fijo") {
-    return "/assets/products/creatina-300-bag.jpg";
-  }
-  return "/assets/products/combo-creatina-x3.jpg";
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
-function getTemplateDefaultImageName(templateType) {
-  if (templateType === "3x2") {
-    return "whey-doypack.jpg";
-  }
-  if (templateType === "Monto fijo") {
-    return "creatina-300-bag.jpg";
-  }
-  return "combo-creatina-x3.jpg";
+function normalizeCouponInput(value) {
+  return normalizeText(value).replace(/\s+/g, "").toUpperCase();
 }
 
-function getTemplateIdByType(type) {
-  if (type === "3x2") {
-    return "threefortwo";
+function formatDateTimeInput(value) {
+  const safeValue = normalizeText(value);
+
+  if (!safeValue) {
+    return "";
   }
-  if (type === "Monto fijo") {
-    return "fixedamount";
+
+  const parsed = new Date(safeValue);
+
+  if (!Number.isFinite(parsed.valueOf())) {
+    return safeValue.slice(0, 16);
   }
-  return "twoforone";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function serializeDateTimeInput(value) {
+  const safeValue = normalizeText(value);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const parsed = new Date(safeValue);
+
+  if (!Number.isFinite(parsed.valueOf())) {
+    return safeValue;
+  }
+
+  return parsed.toISOString();
+}
+
+function couponToDraft(coupon) {
+  return {
+    id: coupon.id,
+    code: coupon.code,
+    name: coupon.name,
+    description: coupon.description || "",
+    couponType: coupon.couponType,
+    couponScope: coupon.couponScope,
+    discountValue: coupon.discountValue ? String(coupon.discountValue) : "",
+    minOrderTotal: coupon.minOrderTotal ? String(coupon.minOrderTotal) : "",
+    maxDiscountAmount:
+      coupon.maxDiscountAmount == null ? "" : String(coupon.maxDiscountAmount),
+    usageLimit: coupon.usageLimit == null ? "" : String(coupon.usageLimit),
+    perUserLimit: coupon.perUserLimit == null ? "" : String(coupon.perUserLimit),
+    startsAt: formatDateTimeInput(coupon.startsAt),
+    endsAt: formatDateTimeInput(coupon.endsAt),
+    active: coupon.active,
+  };
+}
+
+function buildCouponSummary(draft) {
+  const couponType = draft.couponType === "fixed" ? "fixed" : "percentage";
+  const couponScope = draft.couponScope === "shipping" ? "shipping" : "order";
+  const discountValue = Number(draft.discountValue || 0);
+  const minOrderTotal = Number(draft.minOrderTotal || 0);
+
+  const discountLabel =
+    couponType === "fixed"
+      ? `${formatCurrency(discountValue)} menos`
+      : `${discountValue || 0}% off`;
+  const scopeLabel = couponScope === "shipping" ? "sobre envio" : "sobre subtotal";
+  const thresholdLabel = minOrderTotal > 0 ? `desde ${formatCurrency(minOrderTotal)}` : "sin minimo";
+
+  return `${discountLabel} ${scopeLabel} - ${thresholdLabel}`;
 }
 
 function AdminPromotionsPage() {
-  const [promotions, setPromotions] = useState(initialPromotions);
-  const [templateId, setTemplateId] = useState("twoforone");
-  const [editingId, setEditingId] = useState("");
+  const [coupons, setCoupons] = useState([]);
+  const [draft, setDraft] = useState(emptyDraft);
   const [message, setMessage] = useState("");
-  const activeTemplate = useMemo(
-    () => promotionTemplates.find((template) => template.id === templateId) || promotionTemplates[0],
-    [templateId],
-  );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [draft, setDraft] = useState({
-    ...emptyDraft,
-    image: getTemplateDefaultImage("2x1"),
-    imageName: getTemplateDefaultImageName("2x1"),
-  });
-
-  const sortedPromotions = useMemo(
+  const orderedCoupons = useMemo(
     () =>
-      promotions
-        .slice()
-        .sort(
-          (a, b) =>
-            Number(b.active) - Number(a.active) ||
-            String(b.start).localeCompare(String(a.start)),
-        ),
-    [promotions],
+      [...coupons].sort((left, right) => {
+        const activeDiff = Number(right.active) - Number(left.active);
+
+        if (activeDiff !== 0) {
+          return activeDiff;
+        }
+
+        return String(right.startsAt || "").localeCompare(String(left.startsAt || ""));
+      }),
+    [coupons],
   );
 
-  const selectedProduct = useMemo(
-    () => products.find((product) => product.id === draft.targetProductId) || null,
-    [draft.targetProductId],
+  const activeCoupons = useMemo(
+    () => orderedCoupons.filter((coupon) => coupon.active),
+    [orderedCoupons],
   );
 
-  const resolvedScopeTarget = selectedProduct?.name || draft.scopeTarget.trim();
-  const discountAmount = Number(draft.discountAmount || 0);
-  const discountedPreviewPrice =
-    activeTemplate.kind === "fixed" && selectedProduct
-      ? Math.max(0, selectedProduct.price - discountAmount)
-      : 0;
+  const shippingCoupons = useMemo(
+    () => orderedCoupons.filter((coupon) => coupon.couponScope === "shipping"),
+    [orderedCoupons],
+  );
+
+  const orderCoupons = useMemo(
+    () => orderedCoupons.filter((coupon) => coupon.couponScope === "order"),
+    [orderedCoupons],
+  );
+
+  const loadCoupons = async () => {
+    setLoading(true);
+
+    try {
+      const remoteCoupons = await fetchAdminCouponsFromSupabase();
+      setCoupons(remoteCoupons);
+      setMessage("");
+    } catch (loadError) {
+      setMessage(
+        loadError instanceof Error
+          ? loadError.message
+          : "No pudimos cargar los cupones reales.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCoupons();
+  }, []);
 
   const resetDraft = () => {
-    setDraft({
-      ...emptyDraft,
-      image: getTemplateDefaultImage(activeTemplate.type),
-      imageName: getTemplateDefaultImageName(activeTemplate.type),
-    });
-    setEditingId("");
-  };
-
-  const selectTemplate = (template) => {
-    setTemplateId(template.id);
-    setDraft((prev) => ({
-      ...prev,
-      name: prev.name || `${template.type} ${new Date().getFullYear()}`,
-      image: prev.image || getTemplateDefaultImage(template.type),
-      imageName: prev.imageName || getTemplateDefaultImageName(template.type),
-      discountAmount: template.kind === "fixed" ? prev.discountAmount : "",
-    }));
-  };
-
-  const handleEdit = (promotion) => {
-    setEditingId(promotion.id);
-    setTemplateId(getTemplateIdByType(promotion.type));
-    setDraft({
-      name: promotion.name,
-      image: promotion.image || "",
-      imageName: promotion.imageName || "",
-      scopeTarget: promotion.scopeTarget || "",
-      targetProductId: promotion.targetProductId || "",
-      discountAmount: promotion.discountAmount ? String(promotion.discountAmount) : "",
-      start: promotion.start,
-      end: promotion.end,
-      stockLimit: promotion.stockLimit ? String(promotion.stockLimit) : "",
-    });
+    setDraft(emptyDraft);
     setMessage("");
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      setMessage("Subi un archivo de imagen valido: JPG, PNG o WEBP.");
-      event.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setDraft((prev) => ({
-        ...prev,
-        image: typeof reader.result === "string" ? reader.result : prev.image,
-        imageName: file.name,
-      }));
-      setMessage("Imagen cargada correctamente para la promo.");
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
+  const handleEdit = (coupon) => {
+    setDraft(couponToDraft(coupon));
+    setMessage("");
   };
 
-  const handleProductChange = (event) => {
-    const nextProductId = event.target.value;
-    const nextProduct = products.find((product) => product.id === nextProductId);
-
-    setDraft((prev) => ({
-      ...prev,
-      targetProductId: nextProductId,
-      scopeTarget: nextProduct ? nextProduct.name : prev.scopeTarget,
-      image: !prev.image && nextProduct ? nextProduct.image : prev.image,
-      imageName:
-        !prev.imageName && nextProduct
-          ? nextProduct.image.split("/").pop() || prev.imageName
-          : prev.imageName,
-    }));
-  };
-
-  const savePromotion = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
 
-    if (!draft.name.trim() || !resolvedScopeTarget || !draft.image.trim()) {
-      setMessage("Completa nombre, imagen y objetivo comercial para guardar la promo.");
+    if (!normalizeText(draft.code) || !normalizeText(draft.name) || !draft.discountValue) {
+      setMessage("Completa codigo, nombre y valor de descuento para guardar el cupon.");
       return;
     }
 
-    if (activeTemplate.kind === "fixed" && (!selectedProduct || !discountAmount)) {
-      setMessage("Para el descuento fijo elegi un producto y defini un monto valido.");
-      return;
-    }
+    setSaving(true);
 
-    const nextPromotion = {
-      id: editingId || `promo_${Date.now()}`,
-      name: draft.name.trim(),
-      type: activeTemplate.type,
-      condition:
-        activeTemplate.kind === "fixed"
-          ? `${formatCurrency(discountAmount)} menos`
-          : activeTemplate.condition,
-      scopeTarget: resolvedScopeTarget,
-      targetProductId: draft.targetProductId || "",
-      discountAmount: activeTemplate.kind === "fixed" ? discountAmount : null,
-      image: draft.image.trim(),
-      imageName: draft.imageName || draft.image.trim().split("/").pop() || "promo",
-      start: draft.start,
-      end: draft.end,
-      stockLimit: draft.stockLimit ? Number(draft.stockLimit) : null,
-      active: true,
-    };
-
-    setPromotions((prev) =>
-      editingId
-        ? prev.map((promotion) => (promotion.id === editingId ? nextPromotion : promotion))
-        : [nextPromotion, ...prev],
-    );
-
-    setMessage(editingId ? "Promo actualizada correctamente." : "Promo creada correctamente.");
-    resetDraft();
-  };
-
-  const togglePromotion = (id) => {
-    setPromotions((prev) =>
-      prev.map((promotion) =>
-        promotion.id === id ? { ...promotion, active: !promotion.active } : promotion,
-      ),
-    );
-  };
-
-  const removePromotion = (id) => {
-    setPromotions((prev) => prev.filter((promotion) => promotion.id !== id));
-    if (editingId === id) {
+    try {
+      await saveAdminCoupon({
+        ...draft,
+        code: normalizeCouponInput(draft.code),
+        startsAt: serializeDateTimeInput(draft.startsAt),
+        endsAt: serializeDateTimeInput(draft.endsAt),
+      });
+      await loadCoupons();
+      setMessage(draft.id ? "Cupon actualizado correctamente." : "Cupon creado correctamente.");
       resetDraft();
+    } catch (saveError) {
+      setMessage(
+        saveError instanceof Error ? saveError.message : "No pudimos guardar el cupon.",
+      );
+    } finally {
+      setSaving(false);
     }
-    setMessage("Promo eliminada.");
+  };
+
+  const handleToggle = async (coupon) => {
+    setSaving(true);
+
+    try {
+      await saveAdminCoupon({
+        ...coupon,
+        active: !coupon.active,
+      });
+      await loadCoupons();
+      setMessage("Estado del cupon actualizado.");
+    } catch (toggleError) {
+      setMessage(
+        toggleError instanceof Error
+          ? toggleError.message
+          : "No pudimos actualizar el estado del cupon.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (couponId) => {
+    setSaving(true);
+
+    try {
+      await deleteAdminCoupon(couponId);
+      await loadCoupons();
+      setMessage("Cupon eliminado.");
+
+      if (draft.id === couponId) {
+        resetDraft();
+      }
+    } catch (deleteError) {
+      setMessage(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No pudimos eliminar el cupon.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="admin-page-root promo-admin-page">
       <header className="admin-page-header">
         <p>Promociones</p>
-        <h1>Promos simples para operar rapido</h1>
+        <h1>Cupones reales sobre Supabase</h1>
         <span>
-          El sistema queda preparado con promos 2x1, 3x2 y descuento fijo por monto, sin
-          porcentajes.
+          Gestiona descuentos por codigo, alcance sobre subtotal o envio, topes y vigencias
+          reales para el checkout.
         </span>
       </header>
 
-      <section className="admin-card promo-step-card">
-        <div className="promo-step-head">
-          <div>
-            <h2>1) Elegi el tipo de promo</h2>
-            <p>Selecciona el formato comercial que vas a activar para esta campana.</p>
-          </div>
-        </div>
-        <div className="promo-template-grid">
-          {promotionTemplates.map((template) => {
-            const Icon = template.icon;
-            const isActive = template.id === templateId;
+      {loading ? <section className="admin-demo-note">Cargando cupones reales...</section> : null}
+      {!loading && message ? <p className="admin-message">{message}</p> : null}
 
-            return (
-              <button
-                type="button"
-                key={template.id}
-                className={`promo-template-card ${isActive ? "active" : ""}`}
-                onClick={() => selectTemplate(template)}
-              >
-                <div className="promo-template-main">
-                  <span className="promo-template-icon">
-                    <Icon size={20} />
-                  </span>
-                  <div className="promo-template-copy">
-                    <strong>{template.name}</strong>
-                    <small>{template.description}</small>
-                  </div>
-                </div>
-                <span className={`promo-template-check ${isActive ? "active" : ""}`}>
-                  <BadgeCheck size={18} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <section className="admin-kpi-grid">
+        <AdminStatCard
+          icon={TicketPercent}
+          title="Cupones activos"
+          value={activeCoupons.length}
+          helper="Visibles para validacion desde checkout."
+        />
+        <AdminStatCard
+          icon={Percent}
+          title="Sobre subtotal"
+          value={orderCoupons.length}
+          helper="Reglas comerciales aplicadas al valor del pedido."
+        />
+        <AdminStatCard
+          icon={Truck}
+          title="Sobre envio"
+          value={shippingCoupons.length}
+          helper="Beneficios puntuales para abaratar el despacho."
+          tone="highlight"
+        />
+        <AdminStatCard
+          icon={UserRoundCheck}
+          title="Total cargados"
+          value={orderedCoupons.length}
+          helper="Historico actual de cupones disponibles en base."
+          tone="warn"
+        />
       </section>
 
       <section className="admin-card promo-step-card">
         <div className="promo-step-head">
           <div>
-            <h2>2) Configuracion comercial</h2>
-            <p>Completa la informacion principal de la promo y verifica la tarjeta de vista previa.</p>
+            <h2>1) Configura el cupon</h2>
+            <p>Define el codigo, el tipo de descuento y las reglas operativas reales.</p>
           </div>
         </div>
-        <form className="promo-builder" onSubmit={savePromotion}>
+
+        <form className="promo-builder" onSubmit={handleSave}>
           <div className="promo-builder-fields">
-            <label className="promo-wide">
-              <span className="promo-field-label">Nombre de la promo</span>
-              <div className="promo-input-shell">
+            <label>
+              <span className="promo-field-label">Codigo</span>
+              <div className="promo-input-shell with-icon">
+                <Tag size={16} />
                 <input
                   type="text"
-                  placeholder="Ej: Creatinas 2x1"
-                  value={draft.name}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Ej: GRIZZLY10"
+                  value={draft.code}
+                  onChange={(event) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      code: normalizeCouponInput(event.target.value),
+                    }))
+                  }
                 />
               </div>
             </label>
 
-            <div className="promo-static-card">
-              <span>Tipo</span>
-              <strong>{activeTemplate.type}</strong>
-            </div>
-
-            <div className="promo-static-card">
-              <span>Condicion comercial</span>
-              <strong>
-                {activeTemplate.kind === "fixed" && discountAmount
-                  ? `${formatCurrency(discountAmount)} menos`
-                  : activeTemplate.condition}
-              </strong>
-            </div>
-
-            <div className="promo-image-grid promo-wide">
-              <label className="promo-upload-box">
-                <div className="promo-upload-box-head">
-                  <span className="promo-upload-icon">
-                    <ImagePlus size={18} />
-                  </span>
-                  <div>
-                    <span>Subir imagen</span>
-                    <small>Elegi un archivo JPG, PNG o WEBP desde tu compu</small>
-                  </div>
-                </div>
+            <label className="promo-wide">
+              <span className="promo-field-label">Nombre</span>
+              <div className="promo-input-shell with-icon">
+                <TicketPercent size={16} />
                 <input
-                  id="promo-image-file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
+                  type="text"
+                  placeholder="Ej: Lanzamiento invierno"
+                  value={draft.name}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, name: event.target.value }))
+                  }
                 />
-                <div className="promo-upload-row">
-                  <span className="promo-upload-trigger">Seleccionar imagen</span>
-                  <span className="promo-upload-name">
-                    {draft.imageName || "Todavia no cargaste ningun archivo"}
-                  </span>
-                </div>
-              </label>
+              </div>
+            </label>
 
-              <label>
-                <span className="promo-field-label">Ruta o URL de imagen</span>
-                <div className="promo-input-shell with-icon">
-                  <ImagePlus size={16} />
-                  <input
-                    type="text"
-                    placeholder="https://... o /assets/products/..."
-                    value={draft.image}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        image: event.target.value,
-                        imageName: event.target.value.split("/").pop() || prev.imageName,
-                      }))
-                    }
-                  />
-                </div>
-              </label>
-            </div>
+            <label className="promo-wide">
+              <span className="promo-field-label">Descripcion</span>
+              <div className="promo-input-shell">
+                <input
+                  type="text"
+                  placeholder="Texto breve para entender la regla comercial."
+                  value={draft.description}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
 
             <label>
-              <span className="promo-field-label">
-                {activeTemplate.kind === "fixed" ? "Producto con descuento" : "Producto promocionado"}
-              </span>
+              <span className="promo-field-label">Tipo</span>
               <div className="promo-input-shell with-icon">
-                <Package2 size={16} />
-                <select value={draft.targetProductId} onChange={handleProductChange}>
-                  <option value="">Selecciona un producto</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
+                <BadgeDollarSign size={16} />
+                <select
+                  value={draft.couponType}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, couponType: event.target.value }))
+                  }
+                >
+                  <option value="percentage">Porcentaje</option>
+                  <option value="fixed">Monto fijo</option>
                 </select>
               </div>
             </label>
 
             <label>
-              <span className="promo-field-label">Categoria, marca o linea promocionada</span>
+              <span className="promo-field-label">Alcance</span>
               <div className="promo-input-shell with-icon">
-                <Tag size={16} />
-                <input
-                  type="text"
-                  placeholder="Ej: Creatina / Star Nutrition / Whey 2lb"
-                  value={draft.scopeTarget}
+                <Truck size={16} />
+                <select
+                  value={draft.couponScope}
                   onChange={(event) =>
-                    setDraft((prev) => ({ ...prev, scopeTarget: event.target.value }))
+                    setDraft((prev) => ({ ...prev, couponScope: event.target.value }))
                   }
-                />
-              </div>
-            </label>
-
-            {activeTemplate.kind === "fixed" ? (
-              <label className="promo-wide">
-                <span className="promo-field-label">Monto de descuento</span>
-                <div className="promo-input-shell with-icon">
-                  <BadgeDollarSign size={16} />
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Ej: 5000"
-                    value={draft.discountAmount}
-                    onChange={(event) =>
-                      setDraft((prev) => ({ ...prev, discountAmount: event.target.value }))
-                    }
-                  />
-                </div>
-              </label>
-            ) : null}
-
-            <label>
-              <span className="promo-field-label">Fecha inicio</span>
-              <div className="promo-input-shell with-icon">
-                <CalendarDays size={16} />
-                <input
-                  type="date"
-                  value={draft.start}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
-                />
+                >
+                  <option value="order">Subtotal del pedido</option>
+                  <option value="shipping">Costo de envio</option>
+                </select>
               </div>
             </label>
 
             <label>
-              <span className="promo-field-label">Fecha fin</span>
+              <span className="promo-field-label">Valor del descuento</span>
               <div className="promo-input-shell with-icon">
-                <CalendarDays size={16} />
-                <input
-                  type="date"
-                  value={draft.end}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, end: event.target.value }))}
-                />
-              </div>
-            </label>
-
-            <label className="promo-wide">
-              <span className="promo-field-label">Tope de unidades opcional</span>
-              <div className="promo-input-shell with-icon">
-                <Package2 size={16} />
+                <Percent size={16} />
                 <input
                   type="number"
                   min="0"
-                  placeholder="Ej: 100"
-                  value={draft.stockLimit}
+                  placeholder={draft.couponType === "fixed" ? "Ej: 3000" : "Ej: 10"}
+                  value={draft.discountValue}
                   onChange={(event) =>
-                    setDraft((prev) => ({ ...prev, stockLimit: event.target.value }))
+                    setDraft((prev) => ({ ...prev, discountValue: event.target.value }))
                   }
                 />
               </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Subtotal minimo</span>
+              <div className="promo-input-shell with-icon">
+                <BadgeDollarSign size={16} />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Ej: 15000"
+                  value={draft.minOrderTotal}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, minOrderTotal: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Tope maximo de descuento</span>
+              <div className="promo-input-shell with-icon">
+                <BadgeDollarSign size={16} />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Opcional"
+                  value={draft.maxDiscountAmount}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, maxDiscountAmount: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Limite total de usos</span>
+              <div className="promo-input-shell with-icon">
+                <TicketPercent size={16} />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Opcional"
+                  value={draft.usageLimit}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, usageLimit: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Limite por usuario</span>
+              <div className="promo-input-shell with-icon">
+                <UserRoundCheck size={16} />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Opcional"
+                  value={draft.perUserLimit}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, perUserLimit: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Vigencia desde</span>
+              <div className="promo-input-shell with-icon">
+                <CalendarDays size={16} />
+                <input
+                  type="datetime-local"
+                  value={draft.startsAt}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, startsAt: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="promo-field-label">Vigencia hasta</span>
+              <div className="promo-input-shell with-icon">
+                <CalendarDays size={16} />
+                <input
+                  type="datetime-local"
+                  value={draft.endsAt}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, endsAt: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+
+            <label className="switch-inline promo-wide">
+              <input
+                type="checkbox"
+                checked={draft.active}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, active: event.target.checked }))
+                }
+              />
+              <span>Cupon activo para checkout</span>
             </label>
           </div>
 
           <aside className="promo-preview">
             <div className="promo-preview-header">
               <div>
-                <h3>Vista previa</h3>
-                <p>Asi se veria la promo dentro del panel comercial.</p>
+                <h3>Vista previa operativa</h3>
+                <p>Resumen de la regla que se validara de verdad en la Edge Function.</p>
               </div>
               <span className="promo-preview-pill">
-                {activeTemplate.kind === "fixed" ? "$ menos" : activeTemplate.type}
+                {draft.couponScope === "shipping" ? "Envio" : "Pedido"}
               </span>
             </div>
 
             <article className="promo-preview-card">
-              <div className="promo-preview-media">
-                {draft.image ? (
-                  <img src={draft.image} alt={draft.name || "Promo en vista previa"} />
-                ) : (
-                  <span>Imagen de promo</span>
-                )}
-              </div>
-
               <div className="promo-preview-copy">
-                <small className="promo-preview-kicker">Promocion destacada</small>
+                <small className="promo-preview-kicker">Cupon real</small>
                 <small className="promo-preview-file">
-                  Archivo: {draft.imageName || "sin imagen cargada"}
+                  Codigo: {draft.code || "SINCODIGO"}
                 </small>
-                <h4>{draft.name || "Nombre de la promo"}</h4>
+                <h4>{draft.name || "Nombre del cupon"}</h4>
                 <p className="promo-preview-description">
-                  {activeTemplate.kind === "fixed"
-                    ? `Descuento directo en ${resolvedScopeTarget || "producto seleccionado"}`
-                    : `${activeTemplate.condition} en `}
-                  {activeTemplate.kind === "fixed" ? null : <b>{resolvedScopeTarget || "objetivo comercial"}</b>}
+                  {draft.description || "Describe en una frase corta cuando conviene usar este beneficio."}
                 </p>
-
-                {activeTemplate.kind === "fixed" ? (
-                  <div className="promo-preview-prices">
-                    <span>
-                      <b>Precio actual</b>
-                      {selectedProduct ? formatCurrency(selectedProduct.price) : "Selecciona un producto"}
-                    </span>
-                    <span>
-                      <b>Precio promo</b>
-                      {selectedProduct && discountAmount
-                        ? formatCurrency(discountedPreviewPrice)
-                        : "Define el descuento"}
-                    </span>
-                  </div>
-                ) : null}
 
                 <div className="promo-preview-meta">
                   <span>
-                    <b>Vigencia</b>
-                    {draft.start || "sin inicio"} a {draft.end || "sin fin"}
+                    <b>Regla</b>
+                    {buildCouponSummary(draft)}
                   </span>
                   <span>
-                    <b>{activeTemplate.kind === "fixed" ? "Descuento" : "Tope"}</b>
-                    {activeTemplate.kind === "fixed"
-                      ? discountAmount
-                        ? `${formatCurrency(discountAmount)} menos`
-                        : "sin monto definido"
-                      : draft.stockLimit
-                        ? `${draft.stockLimit} unidades promocionales`
-                        : "sin tope"}
+                    <b>Uso total</b>
+                    {draft.usageLimit || "sin limite"}
+                  </span>
+                  <span>
+                    <b>Por usuario</b>
+                    {draft.perUserLimit || "sin limite"}
                   </span>
                 </div>
 
-                <button type="submit">{editingId ? "Guardar cambios" : "Crear promo"}</button>
+                <button type="submit" disabled={saving}>
+                  {saving ? "Guardando..." : draft.id ? "Guardar cambios" : "Crear cupon"}
+                </button>
               </div>
             </article>
           </aside>
         </form>
-        {message && <p className="admin-message">{message}</p>}
       </section>
 
       <section className="admin-card promo-step-card">
         <div className="promo-step-head">
           <div>
-            <h2>3) Promos activas</h2>
-            <p>Gestiona las campanas cargadas y activa o pausa cada promo en segundos.</p>
+            <h2>2) Cupones cargados</h2>
+            <p>Activa, pausa o edita reglas comerciales persistidas en Supabase.</p>
           </div>
         </div>
-        <div className="promo-list-grid">
-          {sortedPromotions.map((promotion) => (
-            <article key={promotion.id} className={`promo-item ${promotion.active ? "on" : "off"}`}>
-              <div className="promo-item-media">
-                <img src={promotion.image} alt={promotion.name} />
-              </div>
 
+        <div className="promo-list-grid">
+          {orderedCoupons.map((coupon) => (
+            <article key={coupon.id} className={`promo-item ${coupon.active ? "on" : "off"}`}>
               <div className="promo-item-content">
                 <header>
-                  <strong>{promotion.name}</strong>
-                  <span>{promotion.active ? "Activa" : "Pausada"}</span>
+                  <strong>{coupon.name}</strong>
+                  <span>{coupon.active ? "Activo" : "Pausado"}</span>
                 </header>
                 <p>
-                  {promotion.type} - {promotion.condition}
+                  <b>{coupon.code}</b> - {buildCouponSummary(couponToDraft(coupon))}
                 </p>
-                <p>
-                  Apunta a: <b>{promotion.scopeTarget}</b>
-                </p>
+                <p>{coupon.description || "Sin descripcion comercial cargada."}</p>
                 <small>
-                  {promotion.start || "sin inicio"} - {promotion.end || "sin fin"}
+                  {coupon.startsAt || "sin inicio"} - {coupon.endsAt || "sin fin"}
                 </small>
-                {promotion.stockLimit && (
-                  <small>Tope promocional: {promotion.stockLimit} unidades</small>
-                )}
+                {coupon.usageLimit != null ? (
+                  <small>Limite total: {coupon.usageLimit} usos</small>
+                ) : null}
               </div>
 
               <div className="promo-actions">
-                <button type="button" onClick={() => handleEdit(promotion)}>
+                <button type="button" onClick={() => handleEdit(coupon)} disabled={saving}>
                   Editar
                 </button>
-                <button type="button" onClick={() => togglePromotion(promotion.id)}>
-                  {promotion.active ? "Desactivar" : "Activar"}
+                <button type="button" onClick={() => handleToggle(coupon)} disabled={saving}>
+                  {coupon.active ? "Desactivar" : "Activar"}
                 </button>
-                <button type="button" onClick={() => removePromotion(promotion.id)}>
+                <button type="button" onClick={() => handleDelete(coupon.id)} disabled={saving}>
                   Eliminar
                 </button>
               </div>

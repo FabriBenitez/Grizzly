@@ -344,6 +344,86 @@ export interface BaseDeDatos {
           updated_at?: string;
         };
       };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          name: string;
+          description: string | null;
+          coupon_type: "percentage" | "fixed";
+          coupon_scope: "order" | "shipping";
+          discount_value: number;
+          min_order_total: number;
+          max_discount_amount: number | null;
+          usage_limit: number | null;
+          per_user_limit: number | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          name: string;
+          description?: string | null;
+          coupon_type: "percentage" | "fixed";
+          coupon_scope?: "order" | "shipping";
+          discount_value: number;
+          min_order_total?: number;
+          max_discount_amount?: number | null;
+          usage_limit?: number | null;
+          per_user_limit?: number | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          code?: string;
+          name?: string;
+          description?: string | null;
+          coupon_type?: "percentage" | "fixed";
+          coupon_scope?: "order" | "shipping";
+          discount_value?: number;
+          min_order_total?: number;
+          max_discount_amount?: number | null;
+          usage_limit?: number | null;
+          per_user_limit?: number | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+      };
+      coupon_usages: {
+        Row: {
+          id: string;
+          coupon_id: string;
+          order_id: string;
+          user_id: string | null;
+          code_snapshot: string;
+          discount_amount: number;
+          used_at: string;
+        };
+        Insert: {
+          id?: string;
+          coupon_id: string;
+          order_id: string;
+          user_id?: string | null;
+          code_snapshot: string;
+          discount_amount?: number;
+          used_at?: string;
+        };
+        Update: {
+          user_id?: string | null;
+          code_snapshot?: string;
+          discount_amount?: number;
+          used_at?: string;
+        };
+      };
       email_logs: {
         Row: {
           id: string;

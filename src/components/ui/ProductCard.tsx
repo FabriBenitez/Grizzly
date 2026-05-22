@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { formatCurrency } from "../../utils/currency";
 import { getEffectivePrice } from "../../utils/catalog";
+import { CATALOG_IMAGE_PLACEHOLDER } from "../../utils/catalogMedia";
+import { getStockState } from "../../shared/catalog/productDiscovery";
 import type { ProductoCatalogo } from "../../tipos/catalogo";
 import estilos from "./ProductCard.module.scss";
 
@@ -14,6 +16,7 @@ interface ProductCardProps {
 
 function ProductCard({ product, compact = false, revealIndex = 0 }: ProductCardProps) {
   const precioEfectivo = getEffectivePrice(product);
+  const stockState = getStockState(product.stock);
   const tarjetaRef = useRef<HTMLElement | null>(null);
   const [esVisible, setEsVisible] = useState(false);
 
@@ -66,9 +69,11 @@ function ProductCard({ product, compact = false, revealIndex = 0 }: ProductCardP
         className={estilos["tarjeta-producto__enlace-imagen"]}
         itemProp="url"
       >
-        {product.promo ? <span className={estilos["tarjeta-producto__etiqueta"]}>En promo</span> : null}
+        {product.promo ? (
+          <span className={estilos["tarjeta-producto__etiqueta"]}>En promo</span>
+        ) : null}
         <img
-          src={product.image}
+          src={product.image || CATALOG_IMAGE_PLACEHOLDER}
           alt={product.name}
           loading="lazy"
           className={estilos["tarjeta-producto__imagen"]}
@@ -85,15 +90,24 @@ function ProductCard({ product, compact = false, revealIndex = 0 }: ProductCardP
           {product.name}
         </Link>
 
-        <div className={estilos["tarjeta-producto__valoracion"]} aria-label={`Valoración ${product.rating} de 5`}>
+        <div
+          className={estilos["tarjeta-producto__valoracion"]}
+          aria-label={`Valoracion ${product.rating} de 5`}
+        >
           <Star size={14} fill="currentColor" />
           <span>{product.rating}</span>
           <small>({product.reviews})</small>
         </div>
 
         {product.promo ? (
-          <small className={estilos["tarjeta-producto__aviso-promocion"]}>Promoción activa</small>
+          <small className={estilos["tarjeta-producto__aviso-promocion"]}>Promocion activa</small>
         ) : null}
+
+        <span
+          className={`${estilos["tarjeta-producto__stock"]} ${estilos[`tarjeta-producto__stock--${stockState.tone}`]}`}
+        >
+          {stockState.label}
+        </span>
 
         <div
           className={estilos["tarjeta-producto__precios"]}
@@ -102,7 +116,14 @@ function ProductCard({ product, compact = false, revealIndex = 0 }: ProductCardP
           itemType="https://schema.org/Offer"
         >
           <meta itemProp="priceCurrency" content="ARS" />
-          <meta itemProp="availability" content={product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"} />
+          <meta
+            itemProp="availability"
+            content={
+              product.stock > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock"
+            }
+          />
           {product.promoPrice ? (
             <small className={estilos["tarjeta-producto__precio-base"]}>
               {formatCurrency(product.price)}

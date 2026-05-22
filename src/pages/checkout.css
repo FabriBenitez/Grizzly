@@ -1641,6 +1641,130 @@
   box-shadow: 0 18px 34px rgba(139, 90, 43, 0.12);
 }
 
+.coupon-box {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid #eadfd2;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 244, 236, 0.98));
+}
+
+.coupon-box.is-applied {
+  border-color: #d7c1a8;
+  box-shadow: 0 16px 28px rgba(120, 81, 54, 0.08);
+}
+
+.coupon-box-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.coupon-box-kicker {
+  display: inline-flex;
+  margin-bottom: 0.25rem;
+  color: #8b5a2b;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.coupon-box-head strong {
+  display: block;
+  color: #1f1b18;
+  font-size: 0.96rem;
+}
+
+.coupon-box-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #d8bea8;
+  background: rgba(255, 248, 240, 0.98);
+  color: #6f4a3f;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coupon-box-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.coupon-input-shell {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  min-height: 54px;
+  padding: 0 0.95rem;
+  border-radius: 16px;
+  border: 1px solid #e6d9cd;
+  background: #fff;
+}
+
+.coupon-input-shell svg {
+  color: #8b5a2b;
+  flex-shrink: 0;
+}
+
+.coupon-input-shell input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1f1b18;
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.coupon-apply-btn,
+.coupon-remove-btn {
+  min-height: 54px;
+  border-radius: 16px;
+  border: 1px solid #d8bea8;
+  padding: 0 1rem;
+  font-size: 0.84rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.coupon-apply-btn {
+  background: linear-gradient(135deg, #7b4f3f, #b37749);
+  color: #fff;
+  border-color: #7b4f3f;
+}
+
+.coupon-remove-btn {
+  background: #fff;
+  color: #6f4a3f;
+}
+
+.coupon-apply-btn:hover,
+.coupon-remove-btn:hover {
+  transform: translateY(-1px);
+}
+
+.coupon-apply-btn:disabled,
+.coupon-remove-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .final-checkout-action {
   display: grid;
   gap: 1rem;
@@ -1901,6 +2025,55 @@
   line-height: 1.45;
 }
 
+.checkout-confirm-review {
+  margin-bottom: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 22px;
+  border: 1px solid #eadfd2;
+  background:
+    radial-gradient(circle at top right, rgba(193, 138, 74, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 244, 236, 0.96));
+}
+
+.checkout-confirm-review-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
+.checkout-confirm-review-head strong {
+  color: #1f1b18;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.checkout-confirm-review-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.checkout-confirm-review-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.9rem 0.95rem;
+  border-radius: 18px;
+  border: 1px solid #eadfd2;
+  background: rgba(255, 255, 255, 0.86);
+  color: #4a403a;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.checkout-confirm-review-item svg {
+  flex-shrink: 0;
+  margin-top: 0.08rem;
+  color: #8b5a2b;
+}
+
 .checkout-confirm-order {
   padding: 1.15rem;
   border-radius: 24px;
@@ -1951,7 +2124,7 @@
 
 .checkout-confirm-totals {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.85rem;
   margin-top: 1rem;
 }
@@ -2003,15 +2176,21 @@
 @media (max-width: 980px) {
   .checkout-progress-strip,
   .checkout-confirm-grid,
-  .checkout-confirm-totals {
+  .checkout-confirm-totals,
+  .checkout-confirm-review-list {
     grid-template-columns: 1fr;
   }
 
   .checkout-ready-card,
   .checkout-confirm-header,
-  .checkout-confirm-actions {
+  .checkout-confirm-actions,
+  .checkout-confirm-review-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .coupon-box-form {
+    grid-template-columns: 1fr;
   }
 
   .checkout-ready-meta {

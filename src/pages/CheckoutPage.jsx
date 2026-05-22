@@ -7,6 +7,7 @@ import {
   MapPin,
   CircleAlert,
   ShieldCheck,
+  Tag,
   Trash2,
   Truck,
 } from "lucide-react";
@@ -14,12 +15,14 @@ import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
 import { determinarTipoEnvioPorDireccion } from "../utils/delivery";
+import { normalizeCouponCode } from "../shared/payments/coupons.ts";
 import {
   sanitizeLettersOnly,
   sanitizePhoneNumber,
   sanitizePostalCode,
 } from "../shared/forms/inputRules";
 import { obtenerSucursalesCorreoArgentino } from "../data/branches";
+import { validatePublicCoupon } from "../utils/coupons.remote";
 import { createCheckoutPayment } from "../utils/orders.remote";
 import "./checkout.css";
 
@@ -110,6 +113,12 @@ function CheckoutPage() {
   });
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(null);
+  const [couponDraft, setCouponDraft] = useState("");
+  const [couponState, setCouponState] = useState({
+    loading: false,
+    error: "",
+    applied: null,
+  });
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -141,6 +150,18 @@ function CheckoutPage() {
 
       if (parsedDraft?.selectedBranch) {
         setSelectedBranch(parsedDraft.selectedBranch);
+      }
+
+      if (typeof parsedDraft?.couponDraft === "string") {
+        setCouponDraft(parsedDraft.couponDraft);
+      }
+
+      if (parsedDraft?.appliedCoupon) {
+        setCouponState({
+          loading: false,
+          error: "",
+          applied: parsedDraft.appliedCoupon,
+        });
       }
 
       setDraftRestored(true);
@@ -197,7 +218,9 @@ function CheckoutPage() {
       !form.address &&
       !form.locality &&
       !form.postalCode &&
-      !selectedBranch;
+      !selectedBranch &&
+      !couponDraft &&
+      !couponState.applied;
 
     try {
       if (isDraftEmpty) {
@@ -210,12 +233,14 @@ function CheckoutPage() {
         JSON.stringify({
           form,
           selectedBranch,
+          couponDraft,
+          appliedCoupon: couponState.applied,
         }),
       );
     } catch {
       // Si localStorage falla, no bloqueamos la experiencia.
     }
-  }, [form, selectedBranch]);
+  }, [couponDraft, couponState.applied, form, selectedBranch]);
 
   const freeShippingBase = summary.total;
   const hasFreeShipping = freeShippingBase >= FREE_SHIPPING_THRESHOLD;
@@ -228,12 +253,72 @@ function CheckoutPage() {
     return deliveryInfo.cost;
   }, [deliveryInfo.cost, hasFreeShipping]);
 
-  const total = summary.total + shippingCost;
+  const couponDiscount = couponState.applied?.discountAmount || 0;
+  const totalDiscount = summary.discount + couponDiscount;
+  const total = Math.max(0, summary.total + shippingCost - couponDiscount);
 
   const selectedPaymentMethod = useMemo(
     () => PAYMENT_METHODS.find((method) => method.id === form.paymentMethod) ?? PAYMENT_METHODS[0],
     [form.paymentMethod],
   );
+
+  const appliedCouponCode = couponState.applied?.code || "";
+
+  useEffect(() => {
+    let active = true;
+
+    if (!appliedCouponCode) {
+      return undefined;
+    }
+
+    const refreshCoupon = async () => {
+      setCouponState((prev) => ({
+        ...prev,
+        loading: true,
+        error: "",
+      }));
+
+      try {
+        const result = await validatePublicCoupon({
+          code: appliedCouponCode,
+          orderAmount: summary.total,
+          shippingCost,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setCouponState({
+          loading: false,
+          error: "",
+          applied: {
+            ...result.coupon,
+            discountAmount: result.discountAmount,
+          },
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setCouponState({
+          loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "No pudimos revalidar el cupon aplicado.",
+          applied: null,
+        });
+      }
+    };
+
+    refreshCoupon();
+
+    return () => {
+      active = false;
+    };
+  }, [appliedCouponCode, shippingCost, summary.total]);
 
   const deliveryModeLabel = useMemo(() => {
     if (deliveryInfo.type === "correo") {
@@ -437,6 +522,9 @@ function CheckoutPage() {
         title: "Pago",
         lines: [
           selectedPaymentMethod?.label || "Metodo pendiente",
+          couponState.applied
+            ? `Cupon ${couponState.applied.code} aplicado`
+            : "Sin cupon aplicado",
           `Total estimado ${formatCurrency(total)}`,
         ],
       },
@@ -452,9 +540,55 @@ function CheckoutPage() {
       form.postalCode,
       selectedBranch,
       selectedPaymentMethod,
+      couponState.applied,
       total,
     ],
   );
+
+  const reviewFacts = useMemo(() => {
+    const facts = [
+      `${selectedPaymentMethod?.label || "Metodo pendiente"} con redireccion segura`,
+      hasFreeShipping
+        ? "Envio gratis desbloqueado para este pedido"
+        : `Envio estimado ${formatCurrency(shippingCost)}`,
+      `Confirmacion al email ${form.email.trim() || "pendiente"}`,
+    ];
+
+    if (deliveryInfo.type === "correo" && selectedBranch) {
+      facts.push(`Retiro en ${selectedBranch.name}, ${selectedBranch.city}`);
+    } else if (deliveryInfo.type === "moto") {
+      facts.push("Entrega rapida por moto mensajeria");
+    }
+
+    if (couponState.applied) {
+      facts.push(`Cupon ${couponState.applied.code} aplicado por ${formatCurrency(couponDiscount)}`);
+    }
+
+    return facts;
+  }, [
+    couponDiscount,
+    couponState.applied,
+    deliveryInfo.type,
+    form.email,
+    hasFreeShipping,
+    selectedBranch,
+    selectedPaymentMethod,
+    shippingCost,
+  ]);
+
+  const summaryBadges = useMemo(() => {
+    const badges = [selectedPaymentMethod?.label || "Metodo pendiente", deliveryModeLabel];
+
+    if (couponState.applied) {
+      badges.push(`Cupon ${couponState.applied.code}`);
+    }
+
+    if (deliveryInfo.type === "correo" && selectedBranch) {
+      badges.push(selectedBranch.name);
+    }
+
+    return badges;
+  }, [couponState.applied, deliveryInfo.type, deliveryModeLabel, selectedBranch, selectedPaymentMethod]);
 
   const getFieldError = (field, nextForm = form) => {
     const trimmedValue = typeof nextForm[field] === "string" ? nextForm[field].trim() : "";
@@ -654,6 +788,59 @@ function CheckoutPage() {
     }
   };
 
+  const applyCoupon = async () => {
+    const safeCode = normalizeCouponCode(couponDraft);
+
+    if (!safeCode) {
+      setCouponState({
+        loading: false,
+        error: "Ingresa un codigo de cupon para validarlo.",
+        applied: null,
+      });
+      return;
+    }
+
+    setCouponState((prev) => ({
+      ...prev,
+      loading: true,
+      error: "",
+    }));
+    setFormError("");
+
+    try {
+      const result = await validatePublicCoupon({
+        code: safeCode,
+        orderAmount: summary.total,
+        shippingCost,
+      });
+
+      setCouponDraft(result.coupon.code);
+      setCouponState({
+        loading: false,
+        error: "",
+        applied: {
+          ...result.coupon,
+          discountAmount: result.discountAmount,
+        },
+      });
+    } catch (error) {
+      setCouponState({
+        loading: false,
+        error: error instanceof Error ? error.message : "No pudimos aplicar el cupon.",
+        applied: null,
+      });
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponDraft("");
+    setCouponState({
+      loading: false,
+      error: "",
+      applied: null,
+    });
+  };
+
   const persistLastOrder = (orderNumber) => {
     if (typeof window === "undefined") {
       return;
@@ -676,12 +863,20 @@ function CheckoutPage() {
     window.localStorage.removeItem(CHECKOUT_DRAFT_STORAGE_KEY);
   };
 
+  const closeConfirmation = () => {
+    if (submitting) {
+      return;
+    }
+
+    setIsConfirmationOpen(false);
+  };
+
   const scrollToSection = (sectionId) => {
     if (typeof window === "undefined") {
       return;
     }
 
-    setIsConfirmationOpen(false);
+    closeConfirmation();
 
     const targetSection = window.document.getElementById(sectionId);
 
@@ -718,6 +913,33 @@ function CheckoutPage() {
   );
 
   const submitCheckout = async () => {
+    if (submitting) {
+      return;
+    }
+
+    if (couponState.loading) {
+      setFormError("Estamos validando tu cupon. Espera un instante antes de continuar.");
+      return;
+    }
+
+    const validation = validateCheckout();
+
+    if (validation.formError || Object.keys(validation.fieldErrors).length > 0) {
+      setTouchedFields(
+        FORM_FIELDS.reduce(
+          (accumulator, field) => ({
+            ...accumulator,
+            [field]: true,
+          }),
+          {},
+        ),
+      );
+      setFieldErrors(validation.fieldErrors);
+      setFormError(validation.formError || "Revisa los datos del pedido antes de continuar.");
+      setIsConfirmationOpen(false);
+      return;
+    }
+
     setSubmitting(true);
     setFormError("");
 
@@ -738,7 +960,7 @@ function CheckoutPage() {
         })),
         totals: {
           subtotal: summary.subtotal,
-          discount: summary.discount,
+          discount: totalDiscount,
           shipping: shippingCost,
           total,
         },
@@ -750,6 +972,7 @@ function CheckoutPage() {
           branch: selectedBranch,
         },
         paymentMethod: form.paymentMethod,
+        couponCode: couponState.applied?.code || "",
         observation: form.observation.trim(),
       };
 
@@ -799,6 +1022,16 @@ function CheckoutPage() {
   };
 
   const handleReviewOrder = () => {
+    if (submitting) {
+      return;
+    }
+
+    if (couponState.loading) {
+      setFormError("Estamos validando tu cupon. Espera unos segundos antes de revisar el pedido.");
+      setIsConfirmationOpen(false);
+      return;
+    }
+
     const validation = validateCheckout();
 
     setTouchedFields(
@@ -938,9 +1171,16 @@ function CheckoutPage() {
                     </div>
 
                     <div className="line discount">
-                      <span>Descuentos</span>
+                      <span>Descuentos de productos</span>
                       <span>-{formatCurrency(summary.discount)}</span>
                     </div>
+
+                    {couponDiscount > 0 ? (
+                      <div className="line discount coupon">
+                        <span>Cupon {couponState.applied?.code}</span>
+                        <span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    ) : null}
 
                     <div className="line">
                       <span>
@@ -960,6 +1200,12 @@ function CheckoutPage() {
                       <span>Total estimado</span>
                       <span>{formatCurrency(total)}</span>
                     </div>
+                  </div>
+
+                  <div className="checkout-summary-badges">
+                    {summaryBadges.map((badge) => (
+                      <span key={badge}>{badge}</span>
+                    ))}
                   </div>
 
                   <div className="checkout-control-panel">
@@ -1023,6 +1269,11 @@ function CheckoutPage() {
                           Editar
                         </button>
                       </div>
+                      {couponState.applied ? (
+                        <p>
+                          Cupon {couponState.applied.code} activo por {formatCurrency(couponDiscount)}
+                        </p>
+                      ) : null}
                       <p>Total final {formatCurrency(total)}</p>
                       <p>{hasFreeShipping ? "Envio gratis desbloqueado" : `Envio estimado ${formatCurrency(shippingCost)}`}</p>
                     </div>
@@ -1316,6 +1567,59 @@ function CheckoutPage() {
               {fieldErrors.paymentMethod ? (
                 <p className="field-error payment-error">{fieldErrors.paymentMethod}</p>
               ) : null}
+
+              <div className={`coupon-box ${couponState.applied ? "is-applied" : ""}`}>
+                <div className="coupon-box-head">
+                  <div>
+                    <span className="coupon-box-kicker">Cupon comercial</span>
+                    <strong>Aplica un codigo si tienes uno</strong>
+                  </div>
+                  {couponState.applied ? (
+                    <span className="coupon-box-pill">{couponState.applied.code}</span>
+                  ) : null}
+                </div>
+
+                <div className="coupon-box-form">
+                  <div className="coupon-input-shell">
+                    <Tag size={16} />
+                    <input
+                      type="text"
+                      value={couponDraft}
+                      onChange={(event) => setCouponDraft(normalizeCouponCode(event.target.value))}
+                      placeholder="Ej: GRIZZLY10"
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="coupon-apply-btn"
+                    onClick={applyCoupon}
+                    disabled={couponState.loading || !couponDraft}
+                  >
+                    {couponState.loading ? "Validando..." : "Aplicar"}
+                  </button>
+
+                  {couponState.applied ? (
+                    <button
+                      type="button"
+                      className="coupon-remove-btn"
+                      onClick={removeCoupon}
+                      disabled={couponState.loading}
+                    >
+                      Quitar
+                    </button>
+                  ) : null}
+                </div>
+
+                <p className={couponState.error ? "field-error" : "field-hint"}>
+                  {couponState.error
+                    ? couponState.error
+                    : couponState.applied
+                      ? `${couponState.applied.name} aplicado. Descuento actual ${formatCurrency(couponDiscount)}.`
+                      : "Si tienes un cupon vigente, lo validaremos antes de cobrar el pedido."}
+                </p>
+              </div>
             </div>
 
             <div className="final-checkout-action">
@@ -1331,15 +1635,16 @@ function CheckoutPage() {
                   </p>
                 </div>
                 <div className="checkout-ready-meta">
-                  <span>{selectedPaymentMethod?.label}</span>
-                  <span>{deliveryModeLabel}</span>
+                  {summaryBadges.map((badge) => (
+                    <span key={`ready-${badge}`}>{badge}</span>
+                  ))}
                 </div>
               </div>
 
               <button
                 type="button"
                 className="btn-whatsapp-confirm"
-                disabled={submitting || !items.length}
+                disabled={submitting || !items.length || couponState.loading}
                 onClick={handleReviewOrder}
               >
                 {submitting ? (
@@ -1365,7 +1670,7 @@ function CheckoutPage() {
       </div>
 
       {isConfirmationOpen ? (
-        <div className="checkout-confirm-overlay" onClick={() => setIsConfirmationOpen(false)}>
+        <div className="checkout-confirm-overlay" onClick={closeConfirmation}>
           <div
             className="checkout-confirm-modal"
             role="dialog"
@@ -1385,7 +1690,8 @@ function CheckoutPage() {
               <button
                 type="button"
                 className="checkout-confirm-close"
-                onClick={() => setIsConfirmationOpen(false)}
+                onClick={closeConfirmation}
+                disabled={submitting}
               >
                 Seguir editando
               </button>
@@ -1403,6 +1709,22 @@ function CheckoutPage() {
                 </section>
               ))}
             </div>
+
+            <section className="checkout-confirm-review">
+              <div className="checkout-confirm-review-head">
+                <span className="checkout-confirm-label">Antes de pagar</span>
+                <strong>Ultima comprobacion del pedido</strong>
+              </div>
+
+              <div className="checkout-confirm-review-list">
+                {reviewFacts.map((fact) => (
+                  <div key={fact} className="checkout-confirm-review-item">
+                    <CheckCircle2 size={16} />
+                    <span>{fact}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div className="checkout-confirm-order">
               <div className="checkout-confirm-order-head">
@@ -1432,6 +1754,12 @@ function CheckoutPage() {
                   <span>Descuentos</span>
                   <strong>-{formatCurrency(summary.discount)}</strong>
                 </div>
+                {couponDiscount > 0 ? (
+                  <div>
+                    <span>Cupon</span>
+                    <strong>-{formatCurrency(couponDiscount)}</strong>
+                  </div>
+                ) : null}
                 <div>
                   <span>Envio</span>
                   <strong>{formatCurrency(shippingCost)}</strong>
@@ -1447,7 +1775,7 @@ function CheckoutPage() {
               <button
                 type="button"
                 className="btn-outline-confirm"
-                onClick={() => setIsConfirmationOpen(false)}
+                onClick={closeConfirmation}
                 disabled={submitting}
               >
                 Editar datos
@@ -1457,7 +1785,7 @@ function CheckoutPage() {
                 type="button"
                 className="btn-whatsapp-confirm confirm-submit"
                 onClick={submitCheckout}
-                disabled={submitting}
+                disabled={submitting || couponState.loading}
               >
                 {submitting ? (
                   <>
