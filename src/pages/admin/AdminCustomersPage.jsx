@@ -3,38 +3,11 @@ import { Crown, MessageCircle, Search, Sparkles, Users } from "lucide-react";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
 import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
-import { demoUsers } from "../../data/adminDemo";
 import { formatCurrency } from "../../utils/currency";
 import { buildWhatsAppLink } from "../../utils/whatsapp";
 
-function readUsers() {
-  try {
-    const raw = window.localStorage.getItem("grizzly_users");
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function aggregateCustomers(orders, users) {
+function aggregateCustomers(orders) {
   const map = new Map();
-
-  users.forEach((user) => {
-    const key = user.email?.toLowerCase() || user.phone || user.id;
-    if (!key) {
-      return;
-    }
-    map.set(key, {
-      key,
-      name: user.name,
-      phone: user.phone || "",
-      email: user.email || "",
-      orderCount: 0,
-      totalSpent: 0,
-      pendingOrders: 0,
-      lastOrder: null,
-    });
-  });
 
   orders.forEach((order) => {
     const email = order.customer?.email?.toLowerCase();
@@ -74,18 +47,10 @@ function getCustomerWhatsAppLink(customer) {
 }
 
 function AdminCustomersPage() {
-  const { orders, useDemoData, loading, error } = useAdminOrdersData();
-  const users = useMemo(() => {
-    const realUsers = readUsers();
-    if (realUsers.length) {
-      return realUsers;
-    }
-
-    return useDemoData ? demoUsers : [];
-  }, [useDemoData]);
+  const { orders, loading, error } = useAdminOrdersData();
   const [search, setSearch] = useState("");
 
-  const customers = useMemo(() => aggregateCustomers(orders, users), [orders, users]);
+  const customers = useMemo(() => aggregateCustomers(orders), [orders]);
 
   const visibleCustomers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -129,11 +94,7 @@ function AdminCustomersPage() {
         </span>
       </header>
 
-      {useDemoData && (
-        <section className="admin-demo-note">
-          Base de clientes de ejemplo cargada para mostrar como quedaria el CRM comercial.
-        </section>
-      )}
+
 
       {loading && <section className="admin-demo-note">Cargando clientes desde pedidos reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}

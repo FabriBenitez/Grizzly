@@ -21,7 +21,7 @@ function getActionTone(currentStatus, targetStatus) {
 }
 
 function AdminPaymentsPage() {
-  const { orders, useDemoData, loading, error, updateStatus } = useAdminOrdersData();
+  const { orders, loading, error, updateStatus } = useAdminOrdersData();
   const [search, setSearch] = useState("");
 
   const paymentOrders = useMemo(() => {
@@ -62,12 +62,6 @@ function AdminPaymentsPage() {
           pedidos a preparacion.
         </span>
       </header>
-
-      {useDemoData && (
-        <section className="admin-demo-note">
-          Estas viendo ejemplos de pagos para visualizar el flujo completo de validacion manual.
-        </section>
-      )}
 
       {loading && <section className="admin-demo-note">Cargando estados de pago reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}

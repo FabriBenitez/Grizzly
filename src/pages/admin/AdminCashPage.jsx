@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import AdminEmptyState from "../../components/admin/AdminEmptyState";
 import AdminStatCard from "../../components/admin/AdminStatCard";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
+import { fetchCashMovements, createCashMovement } from "../../utils/cash.remote";
 
 const CASH_MOVEMENT_TYPES = [
   { id: "apertura", label: "Apertura", direction: "in" },
@@ -29,44 +29,6 @@ const CASH_MOVEMENT_TYPES = [
   { id: "cierre", label: "Cierre", direction: "neutral" },
 ];
 
-const initialCashMovements = [
-  {
-    id: "cash_1",
-    type: "apertura",
-    label: "Apertura",
-    amount: 85000,
-    direction: "in",
-    paymentMethod: "Efectivo",
-    category: "Apertura diaria",
-    reference: "Caja mostrador manana",
-    notes: "Saldo inicial para comenzar el turno.",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "cash_2",
-    type: "ingreso",
-    label: "Ingreso",
-    amount: 32000,
-    direction: "in",
-    paymentMethod: "Transferencia",
-    category: "Venta",
-    reference: "Pedido #000126",
-    notes: "Cobro confirmado.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
-  },
-  {
-    id: "cash_3",
-    type: "egreso",
-    label: "Egreso",
-    amount: 12500,
-    direction: "out",
-    paymentMethod: "Efectivo",
-    category: "Gasto operativo",
-    reference: "Reposicion de embalaje",
-    notes: "Compra de cintas y cajas.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 95).toISOString(),
-  },
-];
 
 function signedAmount(movement) {
   if (movement.direction === "out") {
@@ -104,7 +66,22 @@ function isSameMonth(value, monthKey) {
 }
 
 function AdminCashPage() {
-  const [movements, setMovements] = useLocalStorage("grizzly_cash_movements", initialCashMovements);
+  const [movements, setMovements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchCashMovements()
+      .then((data) => {
+        setMovements(data);
+        setError("");
+      })
+      .catch((err) => {
+        setError(err.message || "Error al cargar caja");
+      })
+      .finally(() => setLoading(false));
+  }, []);
   const [draft, setDraft] = useState({
     type: "ingreso",
     paymentMethod: "Efectivo",
@@ -278,37 +255,43 @@ function AdminCashPage() {
     [categoryLeader, paymentLeader, summary.monthNet, summary.profitability],
   );
 
-  const submitMovement = (event) => {
+  const submitMovement = async (event) => {
     event.preventDefault();
-    if (!Number(draft.amount) || !draft.reference.trim()) {
+    if (!Number(draft.amount) || !draft.reference.trim() || saving) {
       return;
     }
 
-    setMovements((prev) => [
-      {
-        id: `cash_${Date.now()}`,
+    setSaving(true);
+    try {
+      const payload = {
         type: selectedType.id,
         label: selectedType.label,
         amount: Number(draft.amount),
         direction: selectedType.direction,
         paymentMethod: draft.paymentMethod,
-        category: draft.category,
+        category: draft.category.trim(),
         reference: draft.reference.trim(),
         notes: draft.notes.trim(),
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+      };
+      
+      const newMovement = await createCashMovement(payload);
+      
+      setMovements((prev) => [newMovement, ...prev]);
 
-    setDraft({
-      type: "ingreso",
-      paymentMethod: "Efectivo",
-      category: "Venta",
-      amount: "",
-      reference: "",
-      notes: "",
-    });
-    setSelectedMonth(toMonthInput(new Date()));
+      setDraft({
+        type: "ingreso",
+        paymentMethod: "Efectivo",
+        category: "Venta",
+        amount: "",
+        reference: "",
+        notes: "",
+      });
+      setSelectedMonth(toMonthInput(new Date()));
+    } catch (err) {
+      alert(err.message || "No pudimos guardar el movimiento");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -321,6 +304,9 @@ function AdminCashPage() {
           salud mensual del negocio sin cambiar la logica de tu caja actual.
         </span>
       </header>
+
+      {loading && <section className="admin-demo-note">Cargando movimientos de caja...</section>}
+      {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card cash-toolbar-card">
         <div className="admin-card-title">
@@ -516,7 +502,9 @@ function AdminCashPage() {
                 onChange={(event) => setDraft((prev) => ({ ...prev, notes: event.target.value }))}
               />
             </label>
-            <button type="submit">Registrar movimiento</button>
+            <button type="submit" disabled={saving}>
+              {saving ? "Registrando..." : "Registrar movimiento"}
+            </button>
           </form>
         </article>
 

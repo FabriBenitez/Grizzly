@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { CartProvider } from "./context/CartContext";
 import { AuthSupabaseProvider } from "./shared/auth/AuthSupabaseProvider";
+import { StoreSettingsProvider } from "./context/StoreSettingsContext";
 import "./shared/styles/globals.scss";
 import "./styles.css";
 
@@ -16,11 +17,13 @@ if (!contenedorRaiz) {
 ReactDOM.createRoot(contenedorRaiz).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthSupabaseProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </AuthSupabaseProvider>
+      <StoreSettingsProvider>
+        <AuthSupabaseProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </AuthSupabaseProvider>
+      </StoreSettingsProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

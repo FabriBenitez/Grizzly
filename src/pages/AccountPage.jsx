@@ -9,8 +9,14 @@ import {
   STOREFRONT_SHIPPING_POINTS,
   STOREFRONT_SUPPORT_POINTS,
 } from "../data/storefrontContent";
+import { useStoreSettings } from "../context/StoreSettingsContext";
 
 function AccountPage() {
+  const { whatsapp_number } = useStoreSettings();
+  const whatsappUrl = whatsapp_number
+    ? `https://wa.me/${whatsapp_number}?text=${encodeURIComponent("Hola Grizzly, necesito ayuda con una consulta, una compra o un pedido.")}`
+    : STOREFRONT_CONTACT.whatsappUrl;
+
   return (
     <div className="container section-space account-page help-center-page">
       <SeoPagina
@@ -61,7 +67,7 @@ function AccountPage() {
             <Link to="/seguimiento" className="btn-outline">
               Seguir mi pedido
             </Link>
-            <a href={STOREFRONT_CONTACT.whatsappUrl} className="btn-primary" target="_blank" rel="noreferrer">
+            <a href={whatsappUrl} className="btn-primary" target="_blank" rel="noreferrer">
               Consultar por WhatsApp
             </a>
           </div>
@@ -132,7 +138,7 @@ function AccountPage() {
             <span>{STOREFRONT_CONTACT.hours}</span>
           </div>
 
-          <a href={STOREFRONT_CONTACT.whatsappUrl} className="btn-outline" target="_blank" rel="noreferrer">
+          <a href={whatsappUrl} className="btn-outline" target="_blank" rel="noreferrer">
             Abrir WhatsApp
           </a>
         </article>

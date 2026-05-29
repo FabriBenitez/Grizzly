@@ -60,10 +60,6 @@ export async function fetchHeroSlidesFromSupabase({ includeInactive = false } = 
   }
 
   const slides = (data || []).map((row, index) => mapHeroBannerRowToSlide(row, index));
-  if (!slides.length) {
-    return includeInactive ? getDefaultHeroSlides() : getActiveDefaultHeroSlides();
-  }
-
   return slides;
 }
 

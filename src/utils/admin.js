@@ -1,6 +1,4 @@
 import { ORDER_STATUSES } from "../data/constants";
-import { demoOrders } from "../data/adminDemo";
-import { normalizeOrderRecord } from "./orders";
 
 export const CONFIRMED_ORDER_STATUSES = [
   "Pago confirmado",
@@ -104,34 +102,6 @@ export const ADMIN_FUNCTIONALITIES = [
   },
 ];
 
-export function getOrdersSource(realOrders) {
-  const useDemoData = !realOrders.length;
-  return {
-    useDemoData,
-    orders: (useDemoData ? demoOrders : realOrders).map((order) => normalizeOrderRecord(order)),
-  };
-}
-
-export function updateOrderStatusInMemory(orders, orderNumber, nextStatus) {
-  if (!ORDER_STATUSES.includes(nextStatus)) {
-    return orders;
-  }
-
-  return orders.map((order) => {
-    if (order.number !== orderNumber || order.status === nextStatus) {
-      return order;
-    }
-
-    return {
-      ...order,
-      status: nextStatus,
-      statusHistory: [
-        ...(order.statusHistory || []),
-        { status: nextStatus, timestamp: new Date().toISOString() },
-      ],
-    };
-  });
-}
 
 export function getAdminMetrics(orders) {
   const totalOrders = orders.length;

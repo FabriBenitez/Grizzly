@@ -18,7 +18,7 @@ import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
 import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
 import { ADMIN_WORKFLOW_STEPS, getAdminMetrics, getTopProductsFromOrders } from "../../utils/admin";
-import { readStockThreshold } from "../../utils/stock";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
 
 const dashboardMetricConfig = [
   {
@@ -76,17 +76,16 @@ const dashboardMetricConfig = [
 ];
 
 function AdminOverviewPage() {
-  const { orders, useDemoData, loading, error } = useAdminOrdersData();
+  const { orders, loading, error } = useAdminOrdersData();
   const {
     products: catalogProducts,
-    useDemoData: useDemoCatalogData,
     loading: loadingCatalog,
     error: catalogError,
   } = useAdminCatalogData();
   const metrics = useMemo(() => getAdminMetrics(orders), [orders]);
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const topProducts = useMemo(() => getTopProductsFromOrders(orders, 5), [orders]);
-  const stockThreshold = useMemo(() => readStockThreshold(), []);
+  const { stock_threshold: stockThreshold } = useStoreSettings();
   const highlightedProducts = useMemo(() => {
     return catalogProducts.filter((product) => product.highlighted || product.featured).slice(0, 6);
   }, [catalogProducts]);
@@ -109,12 +108,6 @@ function AdminOverviewPage() {
           <span>{orders.length} pedidos visibles</span>
         </div>
       </header>
-
-      {useDemoData && (
-        <section className="admin-demo-note">
-          Mostrando datos de ejemplo para que veas como quedaria el panel con pedidos reales.
-        </section>
-      )}
 
       {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}
@@ -257,12 +250,6 @@ function AdminOverviewPage() {
           </div>
           <Link to="/admin/stock">Configurar umbral global</Link>
         </div>
-        {useDemoCatalogData && !loadingCatalog && (
-          <p className="admin-threshold-help">
-            Inventario mostrado desde el fallback local hasta terminar de publicar el catalogo en
-            Supabase.
-          </p>
-        )}
         {loadingCatalog && <p className="admin-threshold-help">Cargando inventario real...</p>}
         {!loadingCatalog && catalogError && <p className="admin-threshold-help">{catalogError}</p>}
         {!lowStockProducts.length ? (

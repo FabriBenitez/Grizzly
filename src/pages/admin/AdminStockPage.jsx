@@ -2,17 +2,15 @@ import { useMemo, useState } from "react";
 import { AlertCircle, Boxes, PackageCheck, TriangleAlert } from "lucide-react";
 import AdminStatCard from "../../components/admin/AdminStatCard";
 import { useAdminCatalogData } from "../../hooks/useAdminCatalogData";
-import {
-  getStockLevel,
-  getStockPercent,
-  readStockThreshold,
-  writeStockThreshold,
-} from "../../utils/stock";
+import { getStockLevel, getStockPercent } from "../../shared/catalog/stockLevels";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
+import { saveStoreSetting } from "../../utils/settings.remote";
 
 function AdminStockPage() {
-  const { products, setProducts, useDemoData, loading, saving, error, saveProducts } =
+  const { products, setProducts, loading, saving, error, saveProducts } =
     useAdminCatalogData();
-  const [threshold, setThreshold] = useState(readStockThreshold());
+  const { stock_threshold: contextThreshold } = useStoreSettings();
+  const [threshold, setThreshold] = useState(contextThreshold);
   const [message, setMessage] = useState("");
 
   const rows = useMemo(
@@ -34,12 +32,16 @@ function AdminStockPage() {
     return { critical, low, ok };
   }, [rows]);
 
-  const applyThreshold = (event) => {
+  const applyThreshold = async (event) => {
     event.preventDefault();
     const safe = Math.max(1, Number(threshold || 1));
     setThreshold(safe);
-    writeStockThreshold(safe);
-    setMessage("Umbral global de stock actualizado.");
+    try {
+      await saveStoreSetting("stock_threshold", String(safe), "Umbral global de stock bajo");
+      setMessage("Umbral global de stock actualizado.");
+    } catch {
+      setMessage("No pudimos guardar el umbral en la base.");
+    }
   };
 
   const updateStock = (productId, nextValue) => {
@@ -56,11 +58,7 @@ function AdminStockPage() {
   const saveInventory = async () => {
     try {
       await saveProducts(products);
-      setMessage(
-        useDemoData
-          ? "Inventario sincronizado con Supabase usando la base actual."
-          : "Stock guardado correctamente.",
-      );
+      setMessage("Inventario sincronizado con la base actual.");
     } catch {
       setMessage("Actualizamos el stock en pantalla, pero no pudimos persistirlo todavia.");
     }
@@ -77,12 +75,6 @@ function AdminStockPage() {
         </span>
       </header>
 
-      {useDemoData && !loading && (
-        <section className="admin-demo-note">
-          Mostrando stock desde el fallback local. Al guardar, este inventario se publica en
-          Supabase y queda como base real del panel.
-        </section>
-      )}
       {loading && <section className="admin-demo-note">Cargando stock real...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}
 

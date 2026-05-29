@@ -1,4 +1,4 @@
-import { getPublicStockState } from "../../utils/stock";
+import { getPublicStockState } from "./stockLevels";
 
 export function getPromoProducts(products = [], limit = 6) {
   return products

@@ -1,5 +1,7 @@
-import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules.ts";
-import { normalizeCouponCode } from "./coupons.ts";
+import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules";
+import { normalizeCouponCode } from "./coupons";
+import type { CouponDefinition } from "./coupons";
+import { getBaseSubtotalFromOrderItems } from "./coupons";
 
 export const PAYMENT_METHODS = {
   mercadoPago: "mercadopago",

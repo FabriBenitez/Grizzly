@@ -101,6 +101,11 @@ describe("shared/payments/coupons", () => {
         min_order_total: 100,
       }),
     );
+    const futureCoupon = mapCouponRow(
+      buildCouponRow({
+        starts_at: "2030-01-01T00:00:00.000Z",
+      }),
+    );
 
     expect(
       validateCouponResolution({
@@ -121,11 +126,70 @@ describe("shared/payments/coupons", () => {
 
     expect(
       validateCouponResolution({
+        coupon: futureCoupon,
+        orderAmount: 50,
+        shippingCost: 10,
+        now: new Date("2026-05-22T00:00:00.000Z"),
+      }).error,
+    ).toContain("no esta vigente");
+
+    expect(
+      validateCouponResolution({
         coupon: minOrderCoupon,
         orderAmount: 40,
         shippingCost: 10,
       }).error,
     ).toContain("subtotal minimo");
+  });
+
+  it("rechaza cupones por limites de uso", () => {
+    const globalLimitedCoupon = mapCouponRow(
+      buildCouponRow({
+        usage_limit: 5,
+      }),
+    );
+    const userLimitedCoupon = mapCouponRow(
+      buildCouponRow({
+        per_user_limit: 1,
+      }),
+    );
+
+    expect(
+      validateCouponResolution({
+        coupon: globalLimitedCoupon,
+        orderAmount: 50,
+        shippingCost: 10,
+        totalUsageCount: 5, // Límite alcanzado
+      }).error,
+    ).toContain("limite total de usos");
+
+    expect(
+      validateCouponResolution({
+        coupon: userLimitedCoupon,
+        orderAmount: 50,
+        shippingCost: 10,
+        hasKnownUser: true,
+        userUsageCount: 1, // Límite alcanzado por el usuario
+      }).error,
+    ).toContain("maximo permitido para tu cuenta");
+  });
+
+  it("rechaza cupon de envio si no hay costo de envio", () => {
+    const shippingCoupon = mapCouponRow(
+      buildCouponRow({
+        coupon_type: "percentage",
+        coupon_scope: "shipping",
+        discount_value: 100,
+      }),
+    );
+
+    expect(
+      validateCouponResolution({
+        coupon: shippingCoupon,
+        orderAmount: 50,
+        shippingCost: 0, // Envío gratis
+      }).error,
+    ).toContain("no tiene costo de envio");
   });
 
   it("aprueba cupones validos y devuelve el descuento real", () => {

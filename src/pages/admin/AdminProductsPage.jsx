@@ -69,7 +69,7 @@ function AdminProductsPage() {
     categories,
     brands,
     setProducts,
-    useDemoData,
+
     loading,
     saving,
     error,
@@ -137,11 +137,7 @@ function AdminProductsPage() {
   const saveChanges = async () => {
     try {
       await saveProducts(products);
-      setMessage(
-        useDemoData
-          ? "Catalogo sincronizado con Supabase usando el fallback actual como base."
-          : "Cambios de productos guardados correctamente.",
-      );
+      setMessage("Catalogo cargado y base de datos lista.");
     } catch {
       setMessage("Guardamos los cambios en pantalla, pero no pudimos persistirlos todavia.");
     }
@@ -305,11 +301,7 @@ function AdminProductsPage() {
     try {
       const imageUrls = await uploadImages(files, selectedProduct.name);
       appendImagesToProduct(selectedProduct.id, imageUrls);
-      setGalleryMessage(
-        useDemoData
-          ? `${files.length} imagenes agregadas al borrador local del producto.`
-          : `${files.length} imagenes subidas y listas para guardar en la galeria.`,
-      );
+      setGalleryMessage(`${files.length} imagenes subidas y listas para guardar en la galeria.`);
     } catch {
       setGalleryMessage("No pudimos subir las imagenes del producto.");
     } finally {
@@ -405,12 +397,6 @@ function AdminProductsPage() {
         </div>
       </header>
 
-      {useDemoData && !loading && (
-        <section className="admin-demo-note">
-          Mostrando el fallback local del catalogo. Al guardar, este mismo contenido se publica en
-          Supabase y pasa a ser la base real del panel.
-        </section>
-      )}
       {loading && <section className="admin-demo-note">Cargando catalogo real...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}
 

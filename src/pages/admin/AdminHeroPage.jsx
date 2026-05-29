@@ -159,13 +159,9 @@ function AdminHeroPage() {
         <p>Hero</p>
         <h1>Gestion real de banners</h1>
         <span>
-          Carga la imagen, el mensaje principal y la accion comercial para mostrar el carrusel del
-          home desde Supabase.
+          Banners cargados.
         </span>
       </header>
-
-      {loading && <section className="admin-demo-note">Cargando banners reales...</section>}
-      {!loading && message && <section className="admin-demo-note">{message}</section>}
 
       <section className="admin-kpi-grid">
         <AdminStatCard
@@ -306,10 +302,7 @@ function AdminHeroPage() {
               />
               <span>Banner activo en el home</span>
             </label>
-            <p className="hero-admin-helper">
-              Todo lo que edites aqui impacta en el carrusel principal del home y deja de depender
-              de localStorage.
-            </p>
+  
             <div className="hero-admin-actions">
               <button type="submit" disabled={saving}>
                 {saving ? "Guardando..." : draft.id ? "Guardar cambios" : "Crear banner"}

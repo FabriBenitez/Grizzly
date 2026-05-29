@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { PublicEdgeFunctionError, invokePublicEdgeFunction } from "../lib/edgeFunctions.public";
-import { normalizeOrderRecord } from "./orders";
+
 
 const ORDER_SELECT = `
   id,
@@ -222,7 +222,7 @@ export function normalizeRemoteOrder(orderRow) {
   const shippingAddress = orderRow.shipping_address_json || {};
   const uiStatus = mapDbStatusToUiStatus(orderRow, payment);
 
-  return normalizeOrderRecord({
+  return {
     id: orderRow.id,
     number: orderRow.order_number,
     createdAt: orderRow.created_at,
@@ -264,7 +264,7 @@ export function normalizeRemoteOrder(orderRow) {
       paymentStatus: normalizeText(orderRow.payment_status),
       paymentId: payment?.id || null,
     },
-  });
+  };
 }
 
 export async function fetchAdminOrdersFromSupabase() {

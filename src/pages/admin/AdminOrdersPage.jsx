@@ -15,7 +15,7 @@ function getOrderWhatsAppLink(order) {
 }
 
 function AdminOrdersPage() {
-  const { orders, useDemoData, loading, error, updateStatus } = useAdminOrdersData();
+  const { orders, loading, error, updateStatus } = useAdminOrdersData();
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [selectedNumber, setSelectedNumber] = useState("");
@@ -59,13 +59,6 @@ function AdminOrdersPage() {
           panel.
         </span>
       </header>
-
-      {useDemoData && (
-        <section className="admin-demo-note">
-          Datos cargados en modo ejemplo. Al tener pedidos reales, esta tabla se completa
-          automaticamente con tu operacion.
-        </section>
-      )}
 
       {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}

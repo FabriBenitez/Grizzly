@@ -1,21 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthSupabase } from "../shared/auth/AuthSupabaseProvider";
-import { getOrders, updateOrderStatus as updateLocalOrderStatus } from "../utils/orders";
-import { getOrdersSource, updateOrderStatusInMemory } from "../utils/admin";
 import { fetchAdminOrdersFromSupabase, updateRemoteOrderStatus } from "../utils/orders.remote";
-
-function loadLocalOrders() {
-  const source = getOrdersSource(getOrders());
-  return {
-    orders: source.orders,
-    useDemoData: source.useDemoData,
-  };
-}
 
 export function useAdminOrdersData() {
   const { cargando, esAdmin, puedeIniciarSesion } = useAuthSupabase();
   const [orders, setOrders] = useState([]);
-  const [useDemoData, setUseDemoData] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -25,9 +15,7 @@ export function useAdminOrdersData() {
     }
 
     if (!puedeIniciarSesion || !esAdmin) {
-      const local = loadLocalOrders();
-      setOrders(local.orders);
-      setUseDemoData(local.useDemoData);
+      setOrders([]);
       setLoading(false);
       setError("");
       return;
@@ -38,24 +26,15 @@ export function useAdminOrdersData() {
     try {
       const remoteOrders = await fetchAdminOrdersFromSupabase();
 
-      if (remoteOrders.length) {
-        setOrders(remoteOrders);
-        setUseDemoData(false);
-      } else {
-        const local = loadLocalOrders();
-        setOrders(local.orders);
-        setUseDemoData(local.useDemoData);
-      }
+      setOrders(remoteOrders);
 
       setError("");
     } catch (loadError) {
-      const local = loadLocalOrders();
-      setOrders(local.orders);
-      setUseDemoData(local.useDemoData);
+      setOrders([]);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "No pudimos cargar los pedidos reales. Mostrando fallback local.",
+          : "No pudimos cargar los pedidos.",
       );
     } finally {
       setLoading(false);
@@ -74,15 +53,7 @@ export function useAdminOrdersData() {
         return;
       }
 
-      if (useDemoData || !puedeIniciarSesion || !esAdmin) {
-        if (useDemoData) {
-          setOrders((prev) => updateOrderStatusInMemory(prev, orderNumber, nextStatus));
-        } else {
-          updateLocalOrderStatus(orderNumber, nextStatus);
-          const local = loadLocalOrders();
-          setOrders(local.orders);
-          setUseDemoData(local.useDemoData);
-        }
+      if (!puedeIniciarSesion || !esAdmin) {
         return;
       }
 
@@ -98,18 +69,18 @@ export function useAdminOrdersData() {
         );
       }
     },
-    [esAdmin, loadOrders, orders, puedeIniciarSesion, useDemoData],
+    [esAdmin, loadOrders, orders, puedeIniciarSesion],
   );
 
   return useMemo(
     () => ({
       orders,
-      useDemoData,
+      useDemoData: false,
       loading,
       error,
       reload: loadOrders,
       updateStatus,
     }),
-    [error, loadOrders, loading, orders, updateStatus, useDemoData],
+    [error, loadOrders, loading, orders, updateStatus],
   );
 }

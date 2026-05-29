@@ -20,6 +20,8 @@ import AdminHeroPage from "./pages/admin/AdminHeroPage";
 import AdminCustomersPage from "./pages/admin/AdminCustomersPage";
 import AdminStockPage from "./pages/admin/AdminStockPage";
 import AdminCashPage from "./pages/admin/AdminCashPage";
+import AdminFaqPage from "./pages/admin/AdminFaqPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 const AdminReportsPage = lazy(() => import("./pages/admin/AdminReportsPage"));
 
@@ -36,6 +38,8 @@ function App() {
         <Route path="clientes" element={<AdminCustomersPage />} />
         <Route path="stock" element={<AdminStockPage />} />
         <Route path="caja" element={<AdminCashPage />} />
+        <Route path="faq" element={<AdminFaqPage />} />
+        <Route path="configuracion" element={<AdminSettingsPage />} />
         <Route
           path="reportes"
           element={

@@ -9,27 +9,16 @@ import {
   fetchAdminCatalogFromSupabase,
   fetchCatalogBrandsFromSupabase,
   fetchCatalogCategoriesFromSupabase,
-  readLocalAdminCatalog,
   saveAdminCatalogProducts,
   uploadCatalogImages,
 } from "../utils/catalog.remote";
 
-function loadLocalCatalog() {
-  const products = readLocalAdminCatalog();
-  return {
-    products,
-    categories: getCatalogCategories(products),
-    brands: getCatalogBrands(products),
-    useDemoData: true,
-  };
-}
 
 export function useAdminCatalogData() {
   const { cargando, esAdmin, puedeIniciarSesion } = useAuthSupabase();
-  const [products, setProducts] = useState(() => readLocalAdminCatalog());
-  const [categories, setCategories] = useState(() => getCatalogCategories(readLocalAdminCatalog()));
-  const [brands, setBrands] = useState(() => getCatalogBrands(readLocalAdminCatalog()));
-  const [useDemoData, setUseDemoData] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -40,11 +29,9 @@ export function useAdminCatalogData() {
     }
 
     if (!puedeIniciarSesion || !esAdmin) {
-      const local = loadLocalCatalog();
-      setProducts(local.products);
-      setCategories(local.categories);
-      setBrands(local.brands);
-      setUseDemoData(local.useDemoData);
+      setProducts([]);
+      setCategories([]);
+      setBrands([]);
       setLoading(false);
       setError("");
       return;
@@ -59,14 +46,7 @@ export function useAdminCatalogData() {
         fetchCatalogBrandsFromSupabase(),
       ]);
 
-      if (remoteProducts.length) {
-        setProducts(remoteProducts);
-        setUseDemoData(false);
-      } else {
-        const local = loadLocalCatalog();
-        setProducts(local.products);
-        setUseDemoData(local.useDemoData);
-      }
+      setProducts(remoteProducts);
 
       setCategories(
         remoteCategories.length
@@ -79,15 +59,13 @@ export function useAdminCatalogData() {
 
       setError("");
     } catch (loadError) {
-      const local = loadLocalCatalog();
-      setProducts(local.products);
-      setCategories(local.categories);
-      setBrands(local.brands);
-      setUseDemoData(local.useDemoData);
+      setProducts([]);
+      setCategories([]);
+      setBrands([]);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "No pudimos cargar el catalogo real. Mostrando fallback local.",
+          : "No pudimos cargar el catalogo.",
       );
     } finally {
       setLoading(false);
@@ -103,9 +81,6 @@ export function useAdminCatalogData() {
       const safeProducts = Array.isArray(nextProducts) ? nextProducts : [];
 
       if (!puedeIniciarSesion || !esAdmin) {
-        saveCatalogProducts(safeProducts);
-        setProducts(safeProducts);
-        setUseDemoData(true);
         return safeProducts;
       }
 
@@ -116,7 +91,6 @@ export function useAdminCatalogData() {
         setProducts(saved);
         setCategories(getCatalogCategories(saved));
         setBrands(getCatalogBrands(saved));
-        setUseDemoData(false);
         setError("");
         return saved;
       } catch (saveError) {
@@ -170,7 +144,7 @@ export function useAdminCatalogData() {
       categories,
       brands,
       setProducts,
-      useDemoData,
+      useDemoData: false,
       loading,
       saving,
       error,
@@ -188,7 +162,6 @@ export function useAdminCatalogData() {
       saveProducts,
       saving,
       uploadImages,
-      useDemoData,
     ],
   );
 }

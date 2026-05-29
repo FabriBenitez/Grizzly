@@ -15,7 +15,7 @@ import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/currency";
 import { getEffectivePrice } from "../utils/catalog";
 import { determinarTipoEnvioPorDireccion } from "../utils/delivery";
-import { normalizeCouponCode } from "../shared/payments/coupons.ts";
+import { normalizeCouponCode } from "../shared/payments/coupons";
 import {
   sanitizeLettersOnly,
   sanitizePhoneNumber,
@@ -24,6 +24,7 @@ import {
 import { obtenerSucursalesCorreoArgentino } from "../data/branches";
 import { validatePublicCoupon } from "../utils/coupons.remote";
 import { createCheckoutPayment } from "../utils/orders.remote";
+import { useStoreSettings } from "../context/StoreSettingsContext";
 import "./checkout.css";
 
 const PAYMENT_METHODS = [
@@ -34,7 +35,6 @@ const PAYMENT_METHODS = [
   },
 ];
 
-const FREE_SHIPPING_THRESHOLD = 50;
 const LAST_ORDER_STORAGE_KEY = "grizzly_last_order";
 const CHECKOUT_DRAFT_STORAGE_KEY = "grizzly_checkout_draft";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,10 +54,10 @@ const FORM_FIELDS = [
   "branch",
 ];
 
-function FreeShippingProgress({ currentAmount }) {
+function FreeShippingProgress({ currentAmount, threshold }) {
   const safeAmount = Math.max(0, currentAmount || 0);
-  const progress = Math.min(100, Math.round((safeAmount / FREE_SHIPPING_THRESHOLD) * 100));
-  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - safeAmount);
+  const progress = Math.min(100, Math.round((safeAmount / threshold) * 100));
+  const remaining = Math.max(0, threshold - safeAmount);
   const unlocked = remaining === 0;
 
   return (
@@ -70,7 +70,7 @@ function FreeShippingProgress({ currentAmount }) {
               ? "Ya tienes envio gratis"
               : `Te faltan ${formatCurrency(remaining)} para envio gratis`}
           </strong>
-          <span>Envio gratis superando {formatCurrency(FREE_SHIPPING_THRESHOLD)}</span>
+          <span>Envio gratis superando {formatCurrency(threshold)}</span>
         </div>
       </div>
 
@@ -86,7 +86,7 @@ function FreeShippingProgress({ currentAmount }) {
 
       <div className="free-shipping-values">
         <span>{formatCurrency(safeAmount)}</span>
-        <span>{formatCurrency(FREE_SHIPPING_THRESHOLD)}</span>
+        <span>{formatCurrency(threshold)}</span>
       </div>
     </div>
   );
@@ -94,6 +94,7 @@ function FreeShippingProgress({ currentAmount }) {
 
 function CheckoutPage() {
   const { items, summary, updateQuantity, removeItem, clearCart } = useCart();
+  const { free_shipping_threshold, shipping_cost } = useStoreSettings();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -243,15 +244,15 @@ function CheckoutPage() {
   }, [couponDraft, couponState.applied, form, selectedBranch]);
 
   const freeShippingBase = summary.total;
-  const hasFreeShipping = freeShippingBase >= FREE_SHIPPING_THRESHOLD;
+  const hasFreeShipping = freeShippingBase >= free_shipping_threshold;
 
   const shippingCost = useMemo(() => {
     if (hasFreeShipping) {
       return 0;
     }
 
-    return deliveryInfo.cost;
-  }, [deliveryInfo.cost, hasFreeShipping]);
+    return deliveryInfo.cost || shipping_cost;
+  }, [deliveryInfo.cost, hasFreeShipping, shipping_cost]);
 
   const couponDiscount = couponState.applied?.discountAmount || 0;
   const totalDiscount = summary.discount + couponDiscount;
@@ -1162,7 +1163,7 @@ function CheckoutPage() {
                     ))}
                   </ul>
 
-                  <FreeShippingProgress currentAmount={freeShippingBase} />
+                  <FreeShippingProgress currentAmount={summary.total} threshold={free_shipping_threshold} />
 
                   <div className="totals-box">
                     <div className="line">

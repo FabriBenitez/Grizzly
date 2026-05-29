@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import OrderStatusBadge from "../components/ui/OrderStatusBadge";
 import { ORDER_STATUSES } from "../data/constants";
-import { findOrderByNumberAndPhone, updateOrderStatus } from "../utils/orders";
 import { fetchPublicOrderTracking } from "../utils/orders.remote";
 import { formatCompactDate, formatCurrency } from "../utils/currency";
 import { sanitizeOrderNumber, sanitizePhoneNumber } from "../shared/forms/inputRules";
@@ -61,19 +60,9 @@ function TrackOrderPage() {
       setError("");
       setOrder(remoteOrder);
       setOrderNumber(normalizedOrder);
-      return;
-    } catch {
-      const localOrder = findOrderByNumberAndPhone(normalizedOrder, rawPhone || "");
-
-      if (!localOrder) {
-        setError("No encontramos un pedido con esos datos.");
-        setOrder(null);
-        return;
-      }
-
-      setError("");
-      setOrder(localOrder);
-      setOrderNumber(normalizedOrder);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No encontramos un pedido con esos datos.");
+      setOrder(null);
     } finally {
       setSearching(false);
     }
@@ -88,33 +77,6 @@ function TrackOrderPage() {
   const handleSearch = async (event) => {
     event.preventDefault();
     await runSearch(orderNumber, phone);
-  };
-
-  const canCancel =
-    order?.canCancel === false
-      ? false
-      : Boolean(
-          order &&
-            ![
-              "Pago confirmado",
-              "En preparacion",
-              "Despachado",
-              "Entregado",
-              "Cancelado",
-              "Vencido",
-            ].includes(order.status),
-        );
-
-  const cancelOrder = () => {
-    if (!order || order?.canCancel === false) {
-      return;
-    }
-
-    const updated = updateOrderStatus(order.number, "Cancelado");
-
-    if (updated) {
-      setOrder(updated);
-    }
   };
 
   return (
@@ -225,13 +187,6 @@ function TrackOrderPage() {
                 </li>
               ))}
             </ol>
-          </div>
-
-          {canCancel && (
-            <button type="button" className="btn-outline" onClick={cancelOrder}>
-              Cancelar pedido
-            </button>
-          )}
         </section>
       )}
     </div>

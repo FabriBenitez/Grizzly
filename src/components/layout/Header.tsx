@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, Search, ShoppingBag, X } from "lucide-react";
 import { useCart } from "../../context/CartContext";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
 import { useCatalogProducts } from "../../hooks/useCatalogProducts";
 import { getCatalogCategories } from "../../utils/catalogStore";
 import estilos from "./Header.module.scss";
@@ -14,7 +15,7 @@ const navegacionPrincipal = [
   { to: "/faq", label: "Ayuda" },
 ];
 
-const mensajesPromocionales = [
+const mensajesPromocionalesFallback = [
   "Envio gratis a partir de $120.000 en tu compra",
   "Checkout online seguro con seguimiento de pedido",
   "Atencion personalizada para elegir tu suplementacion",
@@ -26,9 +27,17 @@ function Header() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [mostrarMegaMenu, setMostrarMegaMenu] = useState(false);
   const { summary } = useCart();
+  const { announcement_banner } = useStoreSettings();
   const navigate = useNavigate();
 
   const categorias = useMemo(() => getCatalogCategories(productos) as string[], [productos]);
+
+  const mensajesPromocionales = useMemo(() => {
+    if (announcement_banner && announcement_banner.trim().length > 0) {
+      return [announcement_banner, announcement_banner, announcement_banner];
+    }
+    return mensajesPromocionalesFallback;
+  }, [announcement_banner]);
 
   const columnasCategorias = useMemo(() => {
     const itemsPorColumna = Math.ceil(categorias.length / 3);

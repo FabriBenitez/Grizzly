@@ -422,7 +422,7 @@ function buildReportDocument({
   topProducts,
   categoryPerformance,
   paymentMix,
-  useDemoData,
+
 }) {
   const totalOrders = statusDistribution.reduce((acc, item) => acc + item.count, 0);
   const maxStatusCount = Math.max(...statusDistribution.map((item) => item.count), 1);
@@ -668,7 +668,7 @@ function buildReportDocument({
               <strong style="margin-top: 12px;">Generado</strong>
               <span>${escapeHtml(formatShortDateTime(generatedAt))}</span>
               <strong style="margin-top: 12px;">Fuente</strong>
-              <span>${useDemoData ? "Escenario demo enriquecido para presentacion comercial" : "Datos activos del panel administrativo"}</span>
+              <span>Datos activos del panel administrativo</span>
             </div>
           </div>
           <div class="kpis">
@@ -867,19 +867,20 @@ function buildReportDocument({
 }
 
 function AdminReportsPage() {
-  const { orders, useDemoData, loading, error } = useAdminOrdersData();
-  const baseOrders = useMemo(
-    () => (useDemoData ? buildAdvancedReportOrders(orders, products) : orders),
-    [orders, useDemoData],
+  const { orders, loading, error } = useAdminOrdersData();
+
+  const reportOrders = useMemo(
+    () => orders,
+    [orders],
   );
 
   const rangeBounds = useMemo(() => {
-    if (!baseOrders.length) {
+    if (!orders.length) {
       const today = toInputDate(new Date());
       return { min: today, max: today };
     }
 
-    const sortedDates = baseOrders
+    const sortedDates = orders
       .map((order) => toInputDate(order.createdAt))
       .sort((a, b) => a.localeCompare(b));
 
@@ -887,7 +888,7 @@ function AdminReportsPage() {
       min: sortedDates[0],
       max: sortedDates[sortedDates.length - 1],
     };
-  }, [baseOrders]);
+  }, [orders]);
 
   const [dateFrom, setDateFrom] = useState(rangeBounds.min);
   const [dateTo, setDateTo] = useState(rangeBounds.max);
@@ -900,30 +901,30 @@ function AdminReportsPage() {
   const effectiveFrom = dateFrom || rangeBounds.min;
   const effectiveTo = dateTo || rangeBounds.max;
 
-  const reportOrders = useMemo(() => {
+  const currentReportOrders = useMemo(() => {
     const fromDate = buildDateStart(effectiveFrom);
     const toDate = buildDateEnd(effectiveTo);
 
-    return baseOrders.filter((order) => {
+    return orders.filter((order) => {
       const createdAt = new Date(order.createdAt);
       return createdAt >= fromDate && createdAt <= toDate;
     });
-  }, [baseOrders, effectiveFrom, effectiveTo]);
+  }, [orders, effectiveFrom, effectiveTo]);
 
   const productIndex = useMemo(() => new Map(products.map((product) => [product.id, product])), []);
 
-  const statusDistribution = useMemo(() => buildStatusDistribution(reportOrders), [reportOrders]);
-  const salesTrend = useMemo(() => buildSalesTrend(reportOrders), [reportOrders]);
-  const topProducts = useMemo(() => buildTopProducts(reportOrders), [reportOrders]);
+  const statusDistribution = useMemo(() => buildStatusDistribution(currentReportOrders), [currentReportOrders]);
+  const salesTrend = useMemo(() => buildSalesTrend(currentReportOrders), [currentReportOrders]);
+  const topProducts = useMemo(() => buildTopProducts(currentReportOrders), [currentReportOrders]);
   const categoryPerformance = useMemo(
-    () => buildCategoryPerformance(reportOrders, productIndex),
-    [productIndex, reportOrders],
+    () => buildCategoryPerformance(currentReportOrders, productIndex),
+    [productIndex, currentReportOrders],
   );
-  const paymentMix = useMemo(() => buildPaymentMix(reportOrders), [reportOrders]);
-  const funnelData = useMemo(() => buildFunnelData(reportOrders), [reportOrders]);
+  const paymentMix = useMemo(() => buildPaymentMix(currentReportOrders), [currentReportOrders]);
+  const funnelData = useMemo(() => buildFunnelData(currentReportOrders), [currentReportOrders]);
 
   const summary = useMemo(() => {
-    const confirmedOrders = reportOrders.filter((order) =>
+    const confirmedOrders = currentReportOrders.filter((order) =>
       CONFIRMED_ORDER_STATUSES.includes(order.status),
     );
     const revenue = confirmedOrders.reduce((acc, order) => acc + (order.totals?.total || 0), 0);
@@ -937,20 +938,20 @@ function AdminReportsPage() {
       0,
     );
     const activeCustomers = new Set(
-      reportOrders.map(
+      currentReportOrders.map(
         (order) => order.customer?.phone || order.customer?.email || `${order.customer?.name}-${order.number}`,
       ),
     ).size;
     const productsWithSales = new Set(
       confirmedOrders.flatMap((order) => (order.items || []).map((item) => item.id)),
     ).size;
-    const deliveredOrders = reportOrders.filter((order) => order.status === "Entregado").length;
-    const riskOrders = reportOrders.filter((order) =>
+    const deliveredOrders = currentReportOrders.filter((order) => order.status === "Entregado").length;
+    const riskOrders = currentReportOrders.filter((order) =>
       ["Pendiente de pago", "Cancelado", "Vencido"].includes(order.status),
     ).length;
 
     return {
-      totalOrders: reportOrders.length,
+      totalOrders: currentReportOrders.length,
       confirmedOrders: confirmedOrders.length,
       revenue,
       discounts,
@@ -961,7 +962,7 @@ function AdminReportsPage() {
       deliveredOrders,
       riskOrders,
     };
-  }, [reportOrders]);
+  }, [currentReportOrders]);
 
   const insightCards = useMemo(() => {
     const topProduct = topProducts[0];
@@ -1023,7 +1024,11 @@ function AdminReportsPage() {
         topProducts,
         categoryPerformance,
         paymentMix,
-        useDemoData,
+        totalOrders: summary.totalOrders,
+        maxStatusCount: Math.max(...statusDistribution.map(s => s.count), 1),
+        maxPaymentRevenue: Math.max(...paymentMix.map(p => p.revenue), 1),
+        maxCategoryRevenue: Math.max(...categoryPerformance.map(c => c.revenue), 1),
+        maxProductRevenue: Math.max(...topProducts.map(p => p.revenue), 1),
       }),
     );
     reportWindow.document.close();
@@ -1039,9 +1044,7 @@ function AdminReportsPage() {
         <div className="admin-page-header-meta">
           <span>Analitica comercial</span>
           <span>
-            {useDemoData
-              ? "Vista demo enriquecida con mayor volumen para presentar el negocio con varias ventas."
-              : "Vista consolidada con datos activos del panel administrativo."}
+            Reporte basado en <b>{reportOrders.length}</b> pedidos.
           </span>
         </div>
         <p>Reportes</p>
