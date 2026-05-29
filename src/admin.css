@@ -5080,3 +5080,80 @@
   }
 }
 
+/* Mobile & Tablet Responsive Admin Layout */
+@media (max-width: 1024px) {
+  .admin-shell {
+    display: block;
+    min-height: 100vh;
+  }
+  
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    bottom: 0;
+    z-index: 100;
+    transition: left 0.3s ease;
+  }
+  
+  .admin-sidebar.open {
+    left: 0;
+  }
+  
+  .admin-sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 20, 15, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    border: none;
+    width: 100vw;
+    height: 100vh;
+  }
+  
+  .admin-content {
+    padding: 16px;
+  }
+  
+  .admin-toolbar, .admin-two-col, .admin-metrics, .admin-modules {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  
+  .admin-search-shell {
+    width: 100%;
+  }
+  
+  .admin-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+  }
+  
+  .admin-auth-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+  
+  .admin-topbar {
+    padding: 12px 16px;
+    gap: 14px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .admin-topbar-copy {
+    overflow: hidden;
+  }
+  
+  .admin-topbar-copy p {
+    display: none;
+  }
+  
+  .admin-page-header h1 {
+    font-size: 1.8rem;
+  }
+}
