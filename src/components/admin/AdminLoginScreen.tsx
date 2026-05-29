@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { KeyRound, LoaderCircle, LogOut, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LoaderCircle, LogOut, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthSupabase } from "../../shared/auth/AuthSupabaseProvider";
 
@@ -12,6 +12,7 @@ function AdminLoginScreen({ mode = "login" }: AdminLoginScreenProps) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -99,15 +100,26 @@ function AdminLoginScreen({ mode = "login" }: AdminLoginScreenProps) {
           </label>
 
           <label>
-            Contrasena
-            <input
-              type="password"
-              value={form.password}
-              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              placeholder="Ingresar contrasena"
-              autoComplete="current-password"
-              required
-            />
+            Contraseña
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Ingresar contraseña"
+                autoComplete="current-password"
+                required
+                style={{ width: "100%", paddingRight: "40px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                style={{ position: "absolute", right: "8px", background: "transparent", border: "none", cursor: "pointer", color: "inherit", padding: "4px", display: "flex" }}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </label>
 
           <button

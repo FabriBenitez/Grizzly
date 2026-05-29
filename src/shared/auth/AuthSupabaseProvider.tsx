@@ -126,7 +126,7 @@ export function AuthSupabaseProvider({ children }: AuthSupabaseProviderProps) {
       return {
         ok: false,
         message: credencialesInvalidas
-          ? "Email o contrasena incorrectos."
+          ? "Email o contraseña incorrectos."
           : "No pudimos iniciar sesion en este momento.",
       };
     }
