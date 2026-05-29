@@ -187,6 +187,7 @@ function TrackOrderPage() {
                 </li>
               ))}
             </ol>
+          </div>
         </section>
       )}
     </div>

@@ -33,8 +33,7 @@ function mapHeroBannerRowToSlide(row, index = 0) {
 }
 
 function mapDraftToHeroBannerPayload(draft) {
-  return {
-    id: normalizeText(draft?.id) || undefined,
+  const payload = {
     title: normalizeText(draft?.title) || "Banner principal",
     subtitle: normalizeText(draft?.subtitle) || null,
     image_url: normalizeText(draft?.image) || null,
@@ -43,6 +42,13 @@ function mapDraftToHeroBannerPayload(draft) {
     sort_order: Math.max(1, Number(draft?.order || 1)),
     is_active: Boolean(draft?.active),
   };
+  
+  const id = normalizeText(draft?.id);
+  if (id) {
+    payload.id = id;
+  }
+  
+  return payload;
 }
 
 export async function fetchHeroSlidesFromSupabase({ includeInactive = false } = {}) {
@@ -67,7 +73,20 @@ export async function upsertHeroBanner(draft) {
   const client = requireSupabase();
   const payload = mapDraftToHeroBannerPayload(draft);
 
-  const { error } = await client.from("hero_banners").upsert(payload).select("id");
+  let error;
+  // Validar que el ID sea un UUID valido para evitar errores 400
+  const isUUID = payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.id);
+
+  if (isUUID) {
+    const { id, ...updatePayload } = payload;
+    const { error: updateError } = await client.from("hero_banners").update(updatePayload).eq("id", id).select("id");
+    error = updateError;
+  } else {
+    // Es un slide default local (ej: "hero-sale-1") o nuevo, lo insertamos sin id
+    const { id, ...insertPayload } = payload;
+    const { error: insertError } = await client.from("hero_banners").insert([insertPayload]).select("id");
+    error = insertError;
+  }
 
   if (error) {
     throw new Error(error.message || "No pudimos guardar el banner del hero.");
@@ -85,4 +104,28 @@ export async function deleteHeroBanner(id) {
   if (error) {
     throw new Error(error.message || "No pudimos eliminar el banner del hero.");
   }
+}
+
+export async function uploadHeroImage(file) {
+  const client = requireSupabase();
+  if (!file) return null;
+
+  const rawName = normalizeText(file.name) || "banner";
+  const safeName = rawName.replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const path = `hero_banners/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+
+  const { error: uploadError } = await client.storage.from("products").upload(path, file, {
+    upsert: false,
+    cacheControl: "3600",
+  });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || "No pudimos subir la imagen del banner.");
+  }
+
+  const {
+    data: { publicUrl },
+  } = client.storage.from("products").getPublicUrl(path);
+
+  return publicUrl;
 }

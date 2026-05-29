@@ -117,11 +117,29 @@ function normalizeGalleryImages(images, productName) {
   };
 }
 
+function extractMetadata(description) {
+  const normalized = normalizeText(description);
+  const parts = normalized.split("---META---");
+  const cleanDescription = parts[0].trim();
+  let meta = { combo: false, tags: "" };
+  
+  if (parts.length > 1) {
+    try {
+      meta = { ...meta, ...JSON.parse(parts[1].trim()) };
+    } catch (e) {
+      // Ignorar json invalido
+    }
+  }
+  
+  return { cleanDescription, meta };
+}
+
 export function normalizeRemoteCatalogProduct(row) {
   const category = pickRelation(row?.categories);
   const brand = pickRelation(row?.brands);
   const visual = normalizeGalleryImages(row?.product_images, row?.name);
   const promoPrice = row?.promo_price == null ? null : normalizeNumber(row.promo_price);
+  const { cleanDescription, meta } = extractMetadata(row?.description);
 
   return {
     id: normalizeText(row?.id),
@@ -141,13 +159,13 @@ export function normalizeRemoteCatalogProduct(row) {
     sold: 0,
     featured: Boolean(row?.is_featured),
     promo: promoPrice != null && promoPrice > 0,
-    combo: false,
+    combo: Boolean(meta.combo),
+    searchTags: meta.tags || "",
     active: Boolean(row?.is_active),
     highlighted: Boolean(row?.is_featured),
     image: visual.image,
     gallery: visual.gallery,
-    description:
-      normalizeText(row?.description) ||
+    description: cleanDescription ||
       normalizeText(row?.short_description) ||
       "Producto disponible en el catalogo de Grizzly suplementos.",
     _db: {
@@ -213,7 +231,17 @@ async function ensureNamedEntities(table, names) {
 
 function buildProductPayload(product, categoryIdMap, brandIdMap) {
   const normalizedName = normalizeText(product?.name);
-  const description = normalizeText(product?.description);
+  let description = normalizeText(product?.description) || "";
+  
+  if (product?.combo || product?.searchTags) {
+    const meta = {};
+    if (product?.combo) meta.combo = true;
+    if (product?.searchTags) meta.tags = product.searchTags;
+    // Evitar duplicar el meta si ya lo trajo
+    description = description.split("---META---")[0].trim();
+    description += `\n\n---META---\n${JSON.stringify(meta)}`;
+  }
+
   const categoryKey = slugify(product?.category);
   const brandKey = slugify(product?.brand);
 
@@ -222,7 +250,7 @@ function buildProductPayload(product, categoryIdMap, brandIdMap) {
     brand_id: brandIdMap.get(brandKey) || null,
     name: normalizedName,
     slug: slugify(product?.slug || normalizedName) || `producto-${Date.now()}`,
-    short_description: buildShortDescription(description),
+    short_description: buildShortDescription(description.split("---META---")[0].trim()),
     description: description || null,
     sku: normalizeText(product?.sku) || null,
     price: normalizeNumber(product?.price),

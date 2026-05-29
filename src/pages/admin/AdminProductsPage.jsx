@@ -86,6 +86,8 @@ function AdminProductsPage() {
     transferPrice: "",
     stock: "",
     description: "",
+    combo: false,
+    searchTags: "",
   });
   const [message, setMessage] = useState("");
   const [excelFileName, setExcelFileName] = useState("");
@@ -170,7 +172,8 @@ function AdminProductsPage() {
         sold: 0,
         featured: false,
         promo: false,
-        combo: false,
+        combo: draft.combo || false,
+        searchTags: draft.searchTags.trim() || "",
         active: true,
         highlighted: false,
         image: CATALOG_IMAGE_PLACEHOLDER,
@@ -191,6 +194,8 @@ function AdminProductsPage() {
       transferPrice: "",
       stock: "",
       description: "",
+      combo: false,
+      searchTags: "",
     });
 
     try {
@@ -733,6 +738,23 @@ function AdminProductsPage() {
                 setDraft((prev) => ({ ...prev, description: event.target.value }))
               }
             />
+            <label className="products-switch-inline" style={{ marginTop: "10px", width: "100%", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="checkbox"
+                checked={draft.combo}
+                onChange={(event) => setDraft((prev) => ({ ...prev, combo: event.target.checked }))}
+              />
+              <span>Es un combo / promoción</span>
+            </label>
+            {draft.combo && (
+              <input
+                type="text"
+                placeholder="Etiquetas de Búsqueda (ej: creatina, proteina, whey)"
+                value={draft.searchTags}
+                onChange={(event) => setDraft((prev) => ({ ...prev, searchTags: event.target.value }))}
+                style={{ marginTop: "10px" }}
+              />
+            )}
             <button type="submit" disabled={saving || loading}>
               {saving ? "Guardando..." : "Crear producto"}
             </button>
@@ -800,6 +822,30 @@ function AdminProductsPage() {
             />
             <small>Esta descripcion ya se usa en la ficha individual del producto.</small>
           </label>
+          {selectedProduct && (
+            <div className="products-description-editor" style={{ marginTop: "15px" }}>
+              <label className="products-switch-inline" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedProduct.combo || false}
+                  onChange={(event) => updateField(selectedProduct.id, "combo", event.target.checked)}
+                />
+                <span>Es un combo / promoción</span>
+              </label>
+              {selectedProduct.combo && (
+                <>
+                  <span>Etiquetas de Búsqueda para el buscador de la tienda</span>
+                  <input
+                    type="text"
+                    placeholder="Ej: creatina, proteina, whey"
+                    value={selectedProduct.searchTags || ""}
+                    onChange={(event) => updateField(selectedProduct.id, "searchTags", event.target.value)}
+                  />
+                  <small>Cuando el cliente busque alguna de estas palabras, aparecerá este combo.</small>
+                </>
+              )}
+            </div>
+          )}
           <div className="gallery-url-row products-gallery-url-row">
             <input
               type="url"

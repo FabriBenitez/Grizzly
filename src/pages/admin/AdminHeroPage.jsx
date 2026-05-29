@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, LayoutTemplate, Rows3 } from "lucide-react";
 import AdminStatCard from "../../components/admin/AdminStatCard";
-import { fetchHeroSlidesFromSupabase, upsertHeroBanner, deleteHeroBanner } from "../../utils/hero.remote";
+import { fetchHeroSlidesFromSupabase, upsertHeroBanner, deleteHeroBanner, uploadHeroImage } from "../../utils/hero.remote";
 import { getDefaultHeroSlides } from "../../utils/heroSlides";
 
 const baseDraft = {
@@ -89,6 +89,23 @@ function AdminHeroPage() {
   const handleEdit = (slide) => {
     setDraft(slideToDraft(slide));
     setMessage("");
+  };
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setSaving(true);
+    setMessage("Subiendo imagen...");
+    try {
+      const publicUrl = await uploadHeroImage(file);
+      setDraft((prev) => ({ ...prev, image: publicUrl }));
+      setMessage("Imagen subida. Ya puedes guardar el banner.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error al subir la imagen");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -236,55 +253,22 @@ function AdminHeroPage() {
             </div>
           </div>
           <form className="hero-admin-form" onSubmit={handleSubmit}>
+
             <label className="hero-admin-wide">
-              Titulo
+              Imagen del banner (desde tu PC)
               <input
-                type="text"
-                placeholder="Ej: Lanzamientos de la semana"
-                value={draft.title}
-                onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={saving}
               />
+              {draft.image && (
+                <small style={{ display: "block", marginTop: 4, color: "var(--green-700)" }}>
+                  Imagen cargada correctamente.
+                </small>
+              )}
             </label>
-            <label className="hero-admin-wide">
-              Subtitulo
-              <textarea
-                rows="3"
-                placeholder="Mensaje breve para acompanar el banner"
-                value={draft.subtitle}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, subtitle: event.target.value }))
-                }
-              />
-            </label>
-            <label className="hero-admin-wide">
-              URL de imagen
-              <input
-                type="url"
-                placeholder="https://..."
-                value={draft.image}
-                onChange={(event) => setDraft((prev) => ({ ...prev, image: event.target.value }))}
-              />
-            </label>
-            <label>
-              CTA label
-              <input
-                type="text"
-                placeholder="Ej: Ver catalogo"
-                value={draft.ctaLabel}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, ctaLabel: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              CTA destino
-              <input
-                type="text"
-                placeholder="/catalogo"
-                value={draft.ctaHref}
-                onChange={(event) => setDraft((prev) => ({ ...prev, ctaHref: event.target.value }))}
-              />
-            </label>
+
             <label>
               Orden
               <input
@@ -325,15 +309,7 @@ function AdminHeroPage() {
         <article
           className="hero-admin-preview"
           style={{ "--hero-preview": `url("${draft.image || activeSlides[0]?.image || "/assets/products/combo-estrella.jpg"}")` }}
-        >
-          <div className="hero-admin-preview-copy">
-            <p>{draft.title || "Vista previa del banner"}</p>
-            <h3>
-              <strong>{draft.active ? "Banner activo" : "Banner pausado"}</strong>
-            </h3>
-            <small>{draft.subtitle || "Agrega un subtitulo para reforzar el mensaje comercial."}</small>
-          </div>
-        </article>
+        />
       </section>
     </div>
   );

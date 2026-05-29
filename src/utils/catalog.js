@@ -20,7 +20,8 @@ export function filterProducts(products, filters) {
       !normalizedQuery ||
       product.name.toLowerCase().includes(normalizedQuery) ||
       product.category.toLowerCase().includes(normalizedQuery) ||
-      product.brand.toLowerCase().includes(normalizedQuery);
+      product.brand.toLowerCase().includes(normalizedQuery) ||
+      (product.searchTags && product.searchTags.toLowerCase().includes(normalizedQuery));
 
     const matchesCategory = !category || product.category === category;
     const matchesBrand = !brand || product.brand === brand;
