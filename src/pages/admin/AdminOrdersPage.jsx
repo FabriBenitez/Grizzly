@@ -137,14 +137,14 @@ function AdminOrdersPage() {
                             href={whatsappLink}
                             target="_blank"
                             rel="noreferrer"
-                            className="admin-whatsapp-btn compact"
+                            className="admin-whatsapp-btn compact icon-only"
+                            title="Contactar por WhatsApp"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            <MessageCircle size={16} />
-                            WhatsApp
+                            <MessageCircle size={18} />
                           </a>
                         ) : (
-                          <span className="admin-cell-muted">Sin telefono</span>
+                          <span className="admin-cell-muted" title="Sin teléfono">-</span>
                         )}
                       </td>
                       <td>

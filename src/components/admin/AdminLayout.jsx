@@ -14,6 +14,8 @@ import {
   Users,
   Wallet,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useMemo, useState } from "react";
@@ -37,6 +39,7 @@ const adminNav = [
 
 function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { cerrarSesion, perfil, usuario } = useAuthSupabase();
 
   const today = useMemo(
@@ -49,14 +52,16 @@ function AdminLayout() {
   );
 
   return (
-    <div className="admin-shell">
-      <aside className={`admin-sidebar ${menuOpen ? "open" : ""}`}>
+    <div className={`admin-shell ${isCollapsed ? "collapsed-sidebar" : ""}`}>
+      <aside className={`admin-sidebar ${menuOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
         <div className="admin-brand">
           <img src="/assets/logo-grizzly.jpg" alt="Grizzly" />
-          <div>
-            <strong>Admin Grizzly</strong>
-            <small>Panel comercial para ecommerce y local</small>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <strong>Admin Grizzly</strong>
+              <small>Panel comercial</small>
+            </div>
+          )}
         </div>
 
         <nav className="admin-nav">
@@ -69,30 +74,39 @@ function AdminLayout() {
                 to={item.to}
                 end={item.end}
                 onClick={() => setMenuOpen(false)}
+                title={isCollapsed ? item.label : undefined}
+                className={isCollapsed ? "icon-only" : ""}
               >
-                <Icon size={17} />
-                <span>{item.label}</span>
+                <Icon size={isCollapsed ? 22 : 18} />
+                {!isCollapsed && <span>{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
 
         <div className="admin-sidebar-footer">
-          <div className="admin-sidebar-session">
-            <strong>{perfil?.full_name || "Administrador"}</strong>
-            <small>{usuario?.email || "Sesion iniciada"}</small>
-          </div>
+          {!isCollapsed && (
+            <div className="admin-sidebar-session">
+              <strong>{perfil?.full_name || "Administrador"}</strong>
+              <small>{usuario?.email || "Sesion iniciada"}</small>
+            </div>
+          )}
           <button
             type="button"
-            className="admin-logout-btn"
+            className={`admin-logout-btn ${isCollapsed ? "icon-only" : ""}`}
             onClick={() => void cerrarSesion()}
+            title={isCollapsed ? "Cerrar sesión" : undefined}
           >
-            <LogOut size={16} />
-            Cerrar sesion
+            <LogOut size={18} />
+            {!isCollapsed && "Cerrar sesión"}
           </button>
-          <NavLink to="/" className="back-store">
-            <Store size={16} />
-            Ir a tienda cliente
+          <NavLink 
+            to="/" 
+            className={`back-store ${isCollapsed ? "icon-only" : ""}`}
+            title={isCollapsed ? "Ir a tienda" : undefined}
+          >
+            <Store size={18} />
+            {!isCollapsed && <span>Ir a tienda</span>}
           </NavLink>
         </div>
       </aside>
@@ -101,18 +115,32 @@ function AdminLayout() {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <button
-            type="button"
-            className="admin-menu-btn"
-            onClick={() => setMenuOpen((prev) => !prev)}
-            aria-label="Abrir menu admin"
-          >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <div className="admin-topbar-copy">
-            <span>Panel administrativo</span>
-            <p>Operacion comercial unificada para ventas, pedidos, stock y reportes.</p>
-            <strong>{today}</strong>
+          <div className="admin-topbar-actions">
+            {/* Mobile menu toggle */}
+            <button
+              type="button"
+              className="admin-menu-btn mobile-only"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              aria-label="Abrir menu admin"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
+            {/* Desktop collapse toggle */}
+            <button
+              type="button"
+              className="admin-menu-btn desktop-only"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              aria-label={isCollapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+              title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+            </button>
+
+            <div className="admin-topbar-copy">
+              <span>¡Hola, {perfil?.full_name?.split(" ")[0] || "Admin"}! 👋</span>
+              <strong>{today}</strong>
+            </div>
           </div>
         </header>
 

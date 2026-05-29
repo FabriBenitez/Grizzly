@@ -25,53 +25,49 @@ const dashboardMetricConfig = [
     key: "totalOrders",
     title: "Pedidos totales",
     icon: ClipboardList,
-    helper: "Base operativa del periodo actual.",
+    trend: { value: "+12%", positive: true },
   },
   {
     key: "pendingPayment",
     title: "Pendiente de pago",
     icon: TimerReset,
-    helper: "Reservas esperando acreditacion.",
     tone: "warn",
   },
   {
     key: "confirmedPayment",
     title: "Pago confirmado",
     icon: CheckCircle2,
-    helper: "Pedidos listos para pasar a armado.",
+    trend: { value: "+5%", positive: true },
   },
   {
     key: "inPreparation",
     title: "En preparacion",
     icon: Package,
-    helper: "Pedidos hoy en armado operativo.",
   },
   {
     key: "dispatched",
     title: "Despachados",
     icon: Truck,
-    helper: "Salieron a entrega o sucursal.",
   },
   {
     key: "delivered",
     title: "Entregados",
     icon: PackageCheck,
-    helper: "Ventas ya cerradas comercialmente.",
   },
   {
     key: "cancelled",
-    title: "Cancelado o vencido",
+    title: "Cancelado",
     icon: PackageX,
-    helper: "Pedidos caidos para revisar causa.",
     tone: "danger",
+    trend: { value: "-2%", positive: false },
   },
   {
     key: "confirmedRevenue",
-    title: "Facturacion confirmada",
+    title: "Facturacion",
     icon: BadgeDollarSign,
-    helper: "Ingresos consolidados con pago validado.",
     format: formatCurrency,
     tone: "highlight",
+    trend: { value: "+18%", positive: true },
   },
 ];
 
@@ -119,7 +115,7 @@ function AdminOverviewPage() {
             icon={item.icon}
             title={item.title}
             value={item.format ? item.format(metrics[item.key]) : metrics[item.key]}
-            helper={item.helper}
+            trend={item.trend}
             tone={item.tone}
           />
         ))}

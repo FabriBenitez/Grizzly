@@ -638,17 +638,16 @@ function AdminProductsPage() {
                     </div>
                   </td>
                   <td>
-                    <label className="switch-inline products-switch-inline">
+                    <label className="switch-inline products-switch-inline" title={product.active ? "Activo" : "Inactivo"}>
                       <input
                         type="checkbox"
                         checked={product.active}
                         onChange={(event) => updateField(product.id, "active", event.target.checked)}
                       />
-                      <span>{product.active ? "Activo" : "Inactivo"}</span>
                     </label>
                   </td>
                   <td>
-                    <label className="switch-inline products-switch-inline">
+                    <label className="switch-inline products-switch-inline" title={product.highlighted ? "Destacado" : "No destacado"}>
                       <input
                         type="checkbox"
                         checked={product.highlighted}
@@ -656,7 +655,6 @@ function AdminProductsPage() {
                           updateField(product.id, "highlighted", event.target.checked)
                         }
                       />
-                      <span>{product.highlighted ? "Si" : "No"}</span>
                     </label>
                   </td>
                 </tr>
