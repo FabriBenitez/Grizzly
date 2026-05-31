@@ -12,7 +12,6 @@ const navegacionPrincipal = [
   { to: "/promos", label: "Promos" },
   { to: "/catalogo", label: "Productos" },
   { to: "/quienes-somos", label: "Quienes somos" },
-  { to: "/faq", label: "Ayuda" },
 ];
 
 const mensajesPromocionalesFallback = [

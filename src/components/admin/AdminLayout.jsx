@@ -33,7 +33,6 @@ const adminNav = [
   { to: "/admin/stock", label: "Stock", icon: Boxes },
   { to: "/admin/caja", label: "Caja", icon: Receipt },
   { to: "/admin/reportes", label: "Reportes", icon: BarChart3 },
-  { to: "/admin/faq", label: "FAQs", icon: HelpCircle },
   { to: "/admin/configuracion", label: "Sistema", icon: Settings },
 ];
 
