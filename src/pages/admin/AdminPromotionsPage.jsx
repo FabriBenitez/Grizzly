@@ -118,7 +118,8 @@ function buildCouponSummary(draft) {
 function AdminPromotionsPage() {
   const [coupons, setCoupons] = useState([]);
   const [draft, setDraft] = useState(emptyDraft);
-  const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -153,13 +154,13 @@ function AdminPromotionsPage() {
 
   const loadCoupons = async () => {
     setLoading(true);
-
     try {
       const remoteCoupons = await fetchAdminCouponsFromSupabase();
       setCoupons(remoteCoupons);
-      setMessage("");
+      setSuccessMessage("");
+      setErrorMessage("");
     } catch (loadError) {
-      setMessage(
+      setErrorMessage(
         loadError instanceof Error
           ? loadError.message
           : "No pudimos cargar los cupones reales.",
@@ -175,19 +176,23 @@ function AdminPromotionsPage() {
 
   const resetDraft = () => {
     setDraft(emptyDraft);
-    setMessage("");
+    setSuccessMessage("");
+    setErrorMessage("");
   };
 
   const handleEdit = (coupon) => {
     setDraft(couponToDraft(coupon));
-    setMessage("");
+    setSuccessMessage("");
+    setErrorMessage("");
   };
 
   const handleSave = async (event) => {
     event.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
 
     if (!normalizeText(draft.code) || !normalizeText(draft.name) || !draft.discountValue) {
-      setMessage("Completa codigo, nombre y valor de descuento para guardar el cupon.");
+      setErrorMessage("Completa codigo, nombre y valor de descuento para guardar el cupon.");
       return;
     }
 
@@ -201,10 +206,10 @@ function AdminPromotionsPage() {
         endsAt: serializeDateTimeInput(draft.endsAt),
       });
       await loadCoupons();
-      setMessage(draft.id ? "Cupon actualizado correctamente." : "Cupon creado correctamente.");
+      setSuccessMessage(draft.id ? "Cupon actualizado correctamente." : "Cupon creado correctamente.");
       resetDraft();
     } catch (saveError) {
-      setMessage(
+      setErrorMessage(
         saveError instanceof Error ? saveError.message : "No pudimos guardar el cupon.",
       );
     } finally {
@@ -213,6 +218,8 @@ function AdminPromotionsPage() {
   };
 
   const handleToggle = async (coupon) => {
+    setSuccessMessage("");
+    setErrorMessage("");
     setSaving(true);
 
     try {
@@ -221,9 +228,9 @@ function AdminPromotionsPage() {
         active: !coupon.active,
       });
       await loadCoupons();
-      setMessage("Estado del cupon actualizado.");
+      setSuccessMessage("Estado del cupon actualizado.");
     } catch (toggleError) {
-      setMessage(
+      setErrorMessage(
         toggleError instanceof Error
           ? toggleError.message
           : "No pudimos actualizar el estado del cupon.",
@@ -234,18 +241,20 @@ function AdminPromotionsPage() {
   };
 
   const handleDelete = async (couponId) => {
+    setSuccessMessage("");
+    setErrorMessage("");
     setSaving(true);
 
     try {
       await deleteAdminCoupon(couponId);
       await loadCoupons();
-      setMessage("Cupon eliminado.");
+      setSuccessMessage("Cupon eliminado.");
 
       if (draft.id === couponId) {
         resetDraft();
       }
     } catch (deleteError) {
-      setMessage(
+      setErrorMessage(
         deleteError instanceof Error
           ? deleteError.message
           : "No pudimos eliminar el cupon.",
@@ -266,36 +275,48 @@ function AdminPromotionsPage() {
         </span>
       </header>
 
-      {loading ? <section className="admin-demo-note">Cargando cupones reales...</section> : null}
-      {!loading && message ? <p className="admin-message">{message}</p> : null}
+      {successMessage && <div className="admin-message success" style={{ margin: "12px 0 0" }}>{successMessage}</div>}
+      {errorMessage && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{errorMessage}</div>}
 
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={TicketPercent}
-          title="Cupones activos"
-          value={activeCoupons.length}
-          helper="Visibles para validacion desde checkout."
-        />
-        <AdminStatCard
-          icon={Percent}
-          title="Sobre subtotal"
-          value={orderCoupons.length}
-          helper="Reglas comerciales aplicadas al valor del pedido."
-        />
-        <AdminStatCard
-          icon={Truck}
-          title="Sobre envio"
-          value={shippingCoupons.length}
-          helper="Beneficios puntuales para abaratar el despacho."
-          tone="highlight"
-        />
-        <AdminStatCard
-          icon={UserRoundCheck}
-          title="Total cargados"
-          value={orderedCoupons.length}
-          helper="Historico actual de cupones disponibles en base."
-          tone="warn"
-        />
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={TicketPercent}
+              title="Cupones activos"
+              value={activeCoupons.length}
+              helper="Visibles para validacion desde checkout."
+            />
+            <AdminStatCard
+              icon={Percent}
+              title="Sobre subtotal"
+              value={orderCoupons.length}
+              helper="Reglas comerciales aplicadas al valor del pedido."
+            />
+            <AdminStatCard
+              icon={Truck}
+              title="Sobre envio"
+              value={shippingCoupons.length}
+              helper="Beneficios puntuales para abaratar el despacho."
+              tone="highlight"
+            />
+            <AdminStatCard
+              icon={UserRoundCheck}
+              title="Total cargados"
+              value={orderedCoupons.length}
+              helper="Historico actual de cupones disponibles en base."
+              tone="warn"
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-card promo-step-card">
@@ -562,38 +583,51 @@ function AdminPromotionsPage() {
         </div>
 
         <div className="promo-list-grid">
-          {orderedCoupons.map((coupon) => (
-            <article key={coupon.id} className={`promo-item ${coupon.active ? "on" : "off"}`}>
-              <div className="promo-item-content">
-                <header>
-                  <strong>{coupon.name}</strong>
-                  <span>{coupon.active ? "Activo" : "Pausado"}</span>
-                </header>
-                <p>
-                  <b>{coupon.code}</b> - {buildCouponSummary(couponToDraft(coupon))}
-                </p>
-                <p>{coupon.description || "Sin descripcion comercial cargada."}</p>
-                <small>
-                  {coupon.startsAt || "sin inicio"} - {coupon.endsAt || "sin fin"}
-                </small>
-                {coupon.usageLimit != null ? (
-                  <small>Limite total: {coupon.usageLimit} usos</small>
-                ) : null}
-              </div>
+          {loading ? (
+            [...Array(3)].map((_, i) => (
+              <article key={i} className="promo-item off">
+                <div className="promo-item-content" style={{ width: "100%" }}>
+                  <div className="skeleton skeleton-title" style={{ width: "50%", height: 20 }}></div>
+                  <div className="skeleton skeleton-text" style={{ width: "80%" }}></div>
+                  <div className="skeleton skeleton-text" style={{ width: "90%", height: 10 }}></div>
+                  <div className="skeleton skeleton-text" style={{ width: "40%", height: 10 }}></div>
+                </div>
+              </article>
+            ))
+          ) : (
+            orderedCoupons.map((coupon) => (
+              <article key={coupon.id} className={`promo-item ${coupon.active ? "on" : "off"}`}>
+                <div className="promo-item-content">
+                  <header>
+                    <strong>{coupon.name}</strong>
+                    <span>{coupon.active ? "Activo" : "Pausado"}</span>
+                  </header>
+                  <p>
+                    <b>{coupon.code}</b> - {buildCouponSummary(couponToDraft(coupon))}
+                  </p>
+                  <p>{coupon.description || "Sin descripcion comercial cargada."}</p>
+                  <small>
+                    {coupon.startsAt || "sin inicio"} - {coupon.endsAt || "sin fin"}
+                  </small>
+                  {coupon.usageLimit != null ? (
+                    <small>Limite total: {coupon.usageLimit} usos</small>
+                  ) : null}
+                </div>
 
-              <div className="promo-actions">
-                <button type="button" onClick={() => handleEdit(coupon)} disabled={saving}>
-                  Editar
-                </button>
-                <button type="button" onClick={() => handleToggle(coupon)} disabled={saving}>
-                  {coupon.active ? "Desactivar" : "Activar"}
-                </button>
-                <button type="button" onClick={() => handleDelete(coupon.id)} disabled={saving}>
-                  Eliminar
-                </button>
-              </div>
-            </article>
-          ))}
+                <div className="promo-actions">
+                  <button type="button" onClick={() => handleEdit(coupon)} disabled={saving}>
+                    Editar
+                  </button>
+                  <button type="button" onClick={() => handleToggle(coupon)} disabled={saving}>
+                    {coupon.active ? "Desactivar" : "Activar"}
+                  </button>
+                  <button type="button" onClick={() => handleDelete(coupon.id)} disabled={saving}>
+                    Eliminar
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
     </div>

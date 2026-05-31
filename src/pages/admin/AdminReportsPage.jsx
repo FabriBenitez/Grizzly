@@ -1055,8 +1055,7 @@ function AdminReportsPage() {
         </span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando pedidos reales para reportes...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
 
       <section className="admin-card admin-report-toolbar-card">
         <div className="admin-card-title">
@@ -1077,6 +1076,7 @@ function AdminReportsPage() {
                 max={dateTo || rangeBounds.max}
                 value={dateFrom}
                 onChange={(event) => setDateFrom(event.target.value)}
+                disabled={loading}
               />
             </div>
           </label>
@@ -1091,16 +1091,17 @@ function AdminReportsPage() {
                 max={rangeBounds.max}
                 value={dateTo}
                 onChange={(event) => setDateTo(event.target.value)}
+                disabled={loading}
               />
             </div>
           </label>
 
-          <button type="button" className="admin-secondary-btn" onClick={resetDateFilters}>
+          <button type="button" className="admin-secondary-btn" onClick={resetDateFilters} disabled={loading}>
             <FilterX size={16} />
             Ver todo
           </button>
 
-          <button type="button" className="admin-report-export-btn" onClick={exportReportPdf}>
+          <button type="button" className="admin-report-export-btn" onClick={exportReportPdf} disabled={loading}>
             <Download size={16} />
             Exportar PDF formal
           </button>
@@ -1114,54 +1115,76 @@ function AdminReportsPage() {
       </section>
 
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={Wallet}
-          title="Facturacion confirmada"
-          value={formatCurrency(summary.revenue)}
-          helper={`${summary.confirmedOrders} pedidos con impacto comercial confirmado.`}
-          tone="highlight"
-        />
-        <AdminStatCard
-          icon={TrendingUp}
-          title="Ticket promedio"
-          value={formatCurrency(summary.averageTicket)}
-          helper="Promedio por pedido ya cobrado o entregado."
-        />
-        <AdminStatCard
-          icon={ShoppingBag}
-          title="Unidades vendidas"
-          value={summary.unitsSold}
-          helper={`${summary.productsWithSales} productos con rotacion en el periodo.`}
-        />
-        <AdminStatCard
-          icon={Users}
-          title="Clientes activos"
-          value={summary.activeCustomers}
-          helper="Personas que compraron o reservaron dentro del rango."
-        />
-        <AdminStatCard
-          icon={PackageCheck}
-          title="Pedidos entregados"
-          value={summary.deliveredOrders}
-          helper={`${percent(summary.deliveredOrders, summary.totalOrders)}% del total analizado.`}
-        />
-        <AdminStatCard
-          icon={Activity}
-          title="Pedidos en riesgo"
-          value={summary.riskOrders}
-          helper={`${formatCurrency(summary.discounts)} en descuentos comerciales aplicados.`}
-          tone="warn"
-        />
+        {loading ? (
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={Wallet}
+              title="Facturacion confirmada"
+              value={formatCurrency(summary.revenue)}
+              helper={`${summary.confirmedOrders} pedidos con impacto comercial confirmado.`}
+              tone="highlight"
+            />
+            <AdminStatCard
+              icon={TrendingUp}
+              title="Ticket promedio"
+              value={formatCurrency(summary.averageTicket)}
+              helper="Promedio por pedido ya cobrado o entregado."
+            />
+            <AdminStatCard
+              icon={ShoppingBag}
+              title="Unidades vendidas"
+              value={summary.unitsSold}
+              helper={`${summary.productsWithSales} productos con rotacion en el periodo.`}
+            />
+            <AdminStatCard
+              icon={Users}
+              title="Clientes activos"
+              value={summary.activeCustomers}
+              helper="Personas que compraron o reservaron dentro del rango."
+            />
+            <AdminStatCard
+              icon={PackageCheck}
+              title="Pedidos entregados"
+              value={summary.deliveredOrders}
+              helper={`${percent(summary.deliveredOrders, summary.totalOrders)}% del total analizado.`}
+            />
+            <AdminStatCard
+              icon={Activity}
+              title="Pedidos en riesgo"
+              value={summary.riskOrders}
+              helper={`${formatCurrency(summary.discounts)} en descuentos comerciales aplicados.`}
+              tone="warn"
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-insights-grid">
-        {insightCards.map((item) => (
-          <article key={item.label} className="admin-card">
-            <p>{item.label}</p>
-            <strong>{item.value}</strong>
-            <small>{item.helper}</small>
-          </article>
-        ))}
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <article key={i} className="admin-card">
+              <div className="skeleton skeleton-text" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-title" style={{ width: "70%", height: 26, margin: "6px 0" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </article>
+          ))
+        ) : (
+          insightCards.map((item) => (
+            <article key={item.label} className="admin-card">
+              <p>{item.label}</p>
+              <strong>{item.value}</strong>
+              <small>{item.helper}</small>
+            </article>
+          ))
+        )}
       </section>
 
       <section className="admin-charts-grid">
@@ -1174,7 +1197,9 @@ function AdminReportsPage() {
             <span>Segui ritmo operativo y dias fuertes.</span>
           </div>
           <div className="admin-chart-wrap">
-            {salesTrend.length ? (
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 16 }}></div>
+            ) : salesTrend.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesTrend}>
                   <defs>
@@ -1231,7 +1256,9 @@ function AdminReportsPage() {
             <span>Lectura rapida del peso de cada estado.</span>
           </div>
           <div className="admin-chart-wrap">
-            {statusDistribution.some((item) => item.count > 0) ? (
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 16 }}></div>
+            ) : statusDistribution.some((item) => item.count > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={statusDistribution}>
                   <CartesianGrid stroke="#eee3db" strokeDasharray="3 3" vertical={false} />
@@ -1268,7 +1295,9 @@ function AdminReportsPage() {
             <span>Detecta que productos empujan la facturacion.</span>
           </div>
           <div className="admin-chart-wrap">
-            {topProducts.length ? (
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 16 }}></div>
+            ) : topProducts.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topProducts.slice(0, 6)} layout="vertical" margin={{ left: 6 }}>
                   <CartesianGrid stroke="#eee3db" strokeDasharray="3 3" horizontal={false} />
@@ -1305,7 +1334,9 @@ function AdminReportsPage() {
             <span>Muestra que lineas traccionan mas el negocio.</span>
           </div>
           <div className="admin-chart-wrap">
-            {categoryPerformance.length ? (
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 16 }}></div>
+            ) : categoryPerformance.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryPerformance.slice(0, 6)}>
                   <CartesianGrid stroke="#eee3db" strokeDasharray="3 3" vertical={false} />
@@ -1339,14 +1370,18 @@ function AdminReportsPage() {
             </div>
           </div>
           <div className="report-funnel-grid">
-            {funnelData.map((step, index) => (
-              <article key={step.label} className="report-funnel-card">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{step.value}</strong>
-                <b>{step.label}</b>
-                <small>{step.helper}</small>
-              </article>
-            ))}
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: 260, borderRadius: 16 }}></div>
+            ) : (
+              funnelData.map((step, index) => (
+                <article key={step.label} className="report-funnel-card">
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{step.value}</strong>
+                  <b>{step.label}</b>
+                  <small>{step.helper}</small>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
@@ -1359,7 +1394,9 @@ function AdminReportsPage() {
             <span>Entiende como entra la caja por canal de cobro.</span>
           </div>
           <div className="admin-chart-wrap">
-            {paymentMix.length ? (
+            {loading ? (
+              <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 16 }}></div>
+            ) : paymentMix.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -1407,16 +1444,29 @@ function AdminReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {topProducts.slice(0, 8).map((product) => (
-                  <tr key={product.id}>
-                    <td>
-                      <b>{product.name}</b>
-                      <small>{productIndex.get(product.id)?.category || "Sin categoria"}</small>
-                    </td>
-                    <td>{product.quantity}</td>
-                    <td>{formatCurrency(product.revenue)}</td>
-                  </tr>
-                ))}
+                {loading ? (
+                  [...Array(6)].map((_, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="skeleton skeleton-title" style={{ width: "80%", margin: 0 }}></div>
+                        <div className="skeleton skeleton-text" style={{ width: "40%", margin: 0, height: 10 }}></div>
+                      </td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 40 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 70 }}></div></td>
+                    </tr>
+                  ))
+                ) : (
+                  topProducts.slice(0, 8).map((product) => (
+                    <tr key={product.id}>
+                      <td>
+                        <b>{product.name}</b>
+                        <small>{productIndex.get(product.id)?.category || "Sin categoria"}</small>
+                      </td>
+                      <td>{product.quantity}</td>
+                      <td>{formatCurrency(product.revenue)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1439,16 +1489,29 @@ function AdminReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paymentMix.map((payment) => (
-                  <tr key={payment.method}>
-                    <td>
-                      <b>{payment.method}</b>
-                      <small>{percent(payment.revenue, summary.revenue)}% del ingreso confirmado</small>
-                    </td>
-                    <td>{payment.orders}</td>
-                    <td>{formatCurrency(payment.revenue)}</td>
-                  </tr>
-                ))}
+                {loading ? (
+                  [...Array(4)].map((_, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="skeleton skeleton-title" style={{ width: "60%", margin: 0 }}></div>
+                        <div className="skeleton skeleton-text" style={{ width: "80%", margin: 0, height: 10 }}></div>
+                      </td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 30 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 70 }}></div></td>
+                    </tr>
+                  ))
+                ) : (
+                  paymentMix.map((payment) => (
+                    <tr key={payment.method}>
+                      <td>
+                        <b>{payment.method}</b>
+                        <small>{percent(payment.revenue, summary.revenue)}% del ingreso confirmado</small>
+                      </td>
+                      <td>{payment.orders}</td>
+                      <td>{formatCurrency(payment.revenue)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

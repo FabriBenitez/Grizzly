@@ -41,6 +41,7 @@ function AdminSettingsPage() {
     e.preventDefault();
     setSaving(true);
     setMessage("");
+    setError("");
     try {
       await Promise.all([
         saveStoreSetting("whatsapp_number", settings.whatsapp_number, "Numero de WhatsApp para pedidos"),
@@ -50,14 +51,14 @@ function AdminSettingsPage() {
       ]);
       setMessage("Configuraciones guardadas correctamente.");
     } catch (err) {
-      alert(err.message);
+      setError(err.message || "No pudimos guardar las configuraciones.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="admin-page-container">
+    <div className="admin-page-root">
       <header className="admin-page-header">
         <div className="admin-page-header-meta">
           <Settings size={24} strokeWidth={1.5} />
@@ -68,17 +69,20 @@ function AdminSettingsPage() {
         <span>Administra las variables globales que impactan en toda la tienda.</span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando configuraciones...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
-      {message && <section className="admin-demo-note">{message}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
+      {message && <div className="admin-message success" style={{ margin: "12px 0 0" }}>{message}</div>}
 
-      {!loading && !error && (
-        <form onSubmit={handleSubmit} className="admin-card" style={{ maxWidth: 800 }}>
-          <h2 className="admin-card-title">Variables de la Tienda</h2>
-          
-          <div className="admin-form-grid">
-            <label className="admin-form-label">
-              Numero de WhatsApp
+      <form onSubmit={handleSubmit} className="admin-card" style={{ maxWidth: 800 }}>
+        <h2 className="admin-card-title">
+          {loading ? <div className="skeleton" style={{ width: "30%", height: 22 }} /> : "Variables de la Tienda"}
+        </h2>
+        
+        <div className="admin-form-grid">
+          <label className="admin-form-label">
+            Numero de WhatsApp
+            {loading ? (
+              <div className="skeleton" style={{ height: 48, borderRadius: 15 }} />
+            ) : (
               <input
                 type="text"
                 className="admin-input"
@@ -86,10 +90,14 @@ function AdminSettingsPage() {
                 value={settings.whatsapp_number}
                 onChange={(e) => handleChange("whatsapp_number", e.target.value)}
               />
-            </label>
+            )}
+          </label>
 
-            <label className="admin-form-label">
-              Costo de envio Estandar ($)
+          <label className="admin-form-label">
+            Costo de envio Estandar ($)
+            {loading ? (
+              <div className="skeleton" style={{ height: 48, borderRadius: 15 }} />
+            ) : (
               <input
                 type="number"
                 className="admin-input"
@@ -97,10 +105,14 @@ function AdminSettingsPage() {
                 value={settings.shipping_cost}
                 onChange={(e) => handleChange("shipping_cost", e.target.value)}
               />
-            </label>
+            )}
+          </label>
 
-            <label className="admin-form-label">
-              Envio Gratis a partir de ($)
+          <label className="admin-form-label">
+            Envio Gratis a partir de ($)
+            {loading ? (
+              <div className="skeleton" style={{ height: 48, borderRadius: 15 }} />
+            ) : (
               <input
                 type="number"
                 className="admin-input"
@@ -108,10 +120,14 @@ function AdminSettingsPage() {
                 value={settings.free_shipping_threshold}
                 onChange={(e) => handleChange("free_shipping_threshold", e.target.value)}
               />
-            </label>
+            )}
+          </label>
 
-            <label className="admin-form-label" style={{ gridColumn: "1 / -1" }}>
-              Banner de Anuncios (Header superior)
+          <label className="admin-form-label" style={{ gridColumn: "1 / -1" }}>
+            Banner de Anuncios (Header superior)
+            {loading ? (
+              <div className="skeleton" style={{ height: 48, borderRadius: 15 }} />
+            ) : (
               <input
                 type="text"
                 className="admin-input"
@@ -119,17 +135,21 @@ function AdminSettingsPage() {
                 value={settings.announcement_banner}
                 onChange={(e) => handleChange("announcement_banner", e.target.value)}
               />
-            </label>
-          </div>
+            )}
+          </label>
+        </div>
 
-          <div className="admin-card-actions" style={{ marginTop: 32 }}>
+        <div className="admin-card-actions" style={{ marginTop: 32 }}>
+          {loading ? (
+            <div className="skeleton" style={{ width: 180, height: 48, borderRadius: 15 }} />
+          ) : (
             <button type="submit" disabled={saving}>
               <Save size={18} />
               {saving ? "Guardando..." : "Guardar configuraciones"}
             </button>
-          </div>
-        </form>
-      )}
+          )}
+        </div>
+      </form>
     </div>
   );
 }

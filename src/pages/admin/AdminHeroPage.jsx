@@ -44,7 +44,8 @@ function draftToSlide(draft) {
 function AdminHeroPage() {
   const [slides, setSlides] = useState(() => getDefaultHeroSlides());
   const [draft, setDraft] = useState(() => slideToDraft(getDefaultHeroSlides()[0]));
-  const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -62,10 +63,11 @@ function AdminHeroPage() {
     try {
       const remoteSlides = await fetchHeroSlidesFromSupabase({ includeInactive: true });
       setSlides(remoteSlides);
-      setMessage("");
+      setSuccessMessage("");
+      setErrorMessage("");
     } catch (loadError) {
       setSlides(getDefaultHeroSlides());
-      setMessage(
+      setErrorMessage(
         loadError instanceof Error
           ? loadError.message
           : "No pudimos cargar los banners reales. Mostrando fallback local.",
@@ -84,11 +86,14 @@ function AdminHeroPage() {
       ...baseDraft,
       order: orderedSlides.length + 1,
     });
+    setSuccessMessage("");
+    setErrorMessage("");
   };
 
   const handleEdit = (slide) => {
     setDraft(slideToDraft(slide));
-    setMessage("");
+    setSuccessMessage("");
+    setErrorMessage("");
   };
 
   const handleImageChange = async (event) => {
@@ -96,13 +101,15 @@ function AdminHeroPage() {
     if (!file) return;
 
     setSaving(true);
-    setMessage("Subiendo imagen...");
+    setSuccessMessage("Subiendo imagen...");
+    setErrorMessage("");
     try {
       const publicUrl = await uploadHeroImage(file);
       setDraft((prev) => ({ ...prev, image: publicUrl }));
-      setMessage("Imagen subida. Ya puedes guardar el banner.");
+      setSuccessMessage("Imagen subida. Ya puedes guardar el banner.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Error al subir la imagen");
+      setErrorMessage(error instanceof Error ? error.message : "Error al subir la imagen");
+      setSuccessMessage("");
     } finally {
       setSaving(false);
     }
@@ -110,8 +117,10 @@ function AdminHeroPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
     if (!draft.image.trim()) {
-      setMessage("Completa la imagen del banner para guardarlo.");
+      setErrorMessage("Completa la imagen del banner para guardarlo.");
       return;
     }
 
@@ -119,10 +128,10 @@ function AdminHeroPage() {
     try {
       await upsertHeroBanner(draftToSlide(draft));
       await loadSlides();
-      setMessage(draft.id ? "Banner actualizado correctamente." : "Banner creado correctamente.");
+      setSuccessMessage(draft.id ? "Banner actualizado correctamente." : "Banner creado correctamente.");
       resetDraft();
     } catch (saveError) {
-      setMessage(
+      setErrorMessage(
         saveError instanceof Error
           ? saveError.message
           : "No pudimos guardar el banner en la base.",
@@ -133,6 +142,8 @@ function AdminHeroPage() {
   };
 
   const toggleSlide = async (slide) => {
+    setSuccessMessage("");
+    setErrorMessage("");
     setSaving(true);
     try {
       await upsertHeroBanner({
@@ -140,9 +151,9 @@ function AdminHeroPage() {
         active: !slide.active,
       });
       await loadSlides();
-      setMessage("Estado del banner actualizado.");
+      setSuccessMessage("Estado del banner actualizado.");
     } catch (toggleError) {
-      setMessage(
+      setErrorMessage(
         toggleError instanceof Error
           ? toggleError.message
           : "No pudimos actualizar el estado del banner.",
@@ -153,14 +164,16 @@ function AdminHeroPage() {
   };
 
   const removeSlide = async (id) => {
+    setSuccessMessage("");
+    setErrorMessage("");
     setSaving(true);
     try {
       await deleteHeroBanner(id);
       await loadSlides();
-      setMessage("Banner eliminado del hero.");
+      setSuccessMessage("Banner eliminado del hero.");
       resetDraft();
     } catch (removeError) {
-      setMessage(
+      setErrorMessage(
         removeError instanceof Error
           ? removeError.message
           : "No pudimos eliminar el banner del hero.",
@@ -180,33 +193,48 @@ function AdminHeroPage() {
         </span>
       </header>
 
+      {successMessage && <div className="admin-message success" style={{ margin: "12px 0 0" }}>{successMessage}</div>}
+      {errorMessage && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{errorMessage}</div>}
+
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={LayoutTemplate}
-          title="Banners totales"
-          value={orderedSlides.length}
-          helper="Cantidad administrada desde este modulo."
-        />
-        <AdminStatCard
-          icon={Eye}
-          title="Banners activos"
-          value={activeSlides.length}
-          helper="Se muestran hoy dentro del home."
-        />
-        <AdminStatCard
-          icon={EyeOff}
-          title="Inactivos"
-          value={Math.max(0, orderedSlides.length - activeSlides.length)}
-          helper="Guardados pero pausados comercialmente."
-          tone="warn"
-        />
-        <AdminStatCard
-          icon={Rows3}
-          title="Uso sugerido"
-          value="3 a 5 slides"
-          helper="Volumen ideal para mantener impacto visual."
-          tone="highlight"
-        />
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={LayoutTemplate}
+              title="Banners totales"
+              value={orderedSlides.length}
+              helper="Cantidad administrada desde este modulo."
+            />
+            <AdminStatCard
+              icon={Eye}
+              title="Banners activos"
+              value={activeSlides.length}
+              helper="Se muestran hoy dentro del home."
+            />
+            <AdminStatCard
+              icon={EyeOff}
+              title="Inactivos"
+              value={Math.max(0, orderedSlides.length - activeSlides.length)}
+              helper="Guardados pero pausados comercialmente."
+              tone="warn"
+            />
+            <AdminStatCard
+              icon={Rows3}
+              title="Uso sugerido"
+              value="3 a 5 slides"
+              helper="Volumen ideal para mantener impacto visual."
+              tone="highlight"
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-two-col">
@@ -221,27 +249,40 @@ function AdminHeroPage() {
             </button>
           </div>
           <div className="hero-admin-list">
-            {orderedSlides.map((slide) => (
-              <article key={slide.id} className={`hero-admin-card ${slide.active ? "on" : "off"}`}>
-                <img src={slide.image} alt={slide.title || `Banner ${slide.order}`} />
-                <div>
-                  <strong>{slide.title || `Banner #${slide.order}`}</strong>
-                  <small>Orden {slide.order}</small>
-                  <small>{slide.active ? "Visible en el home" : "Pausado"}</small>
-                </div>
-                <div className="promo-actions">
-                  <button type="button" onClick={() => handleEdit(slide)} disabled={saving}>
-                    Editar
-                  </button>
-                  <button type="button" onClick={() => toggleSlide(slide)} disabled={saving}>
-                    {slide.active ? "Desactivar" : "Activar"}
-                  </button>
-                  <button type="button" onClick={() => removeSlide(slide.id)} disabled={saving}>
-                    Eliminar
-                  </button>
-                </div>
-              </article>
-            ))}
+            {loading ? (
+              [...Array(2)].map((_, i) => (
+                <article key={i} className="hero-admin-card off">
+                  <div className="skeleton" style={{ width: 120, height: 80, borderRadius: 14 }}></div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+                    <div className="skeleton skeleton-title" style={{ width: "50%", margin: 0 }}></div>
+                    <div className="skeleton skeleton-text" style={{ width: "30%", margin: 0, height: 10 }}></div>
+                    <div className="skeleton skeleton-text" style={{ width: "40%", margin: 0, height: 10 }}></div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              orderedSlides.map((slide) => (
+                <article key={slide.id} className={`hero-admin-card ${slide.active ? "on" : "off"}`}>
+                  <img src={slide.image} alt={slide.title || `Banner ${slide.order}`} />
+                  <div>
+                    <strong>{slide.title || `Banner #${slide.order}`}</strong>
+                    <small>Orden {slide.order}</small>
+                    <small>{slide.active ? "Visible en el home" : "Pausado"}</small>
+                  </div>
+                  <div className="promo-actions">
+                    <button type="button" onClick={() => handleEdit(slide)} disabled={saving}>
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => toggleSlide(slide)} disabled={saving}>
+                      {slide.active ? "Desactivar" : "Activar"}
+                    </button>
+                    <button type="button" onClick={() => removeSlide(slide.id)} disabled={saving}>
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
@@ -260,7 +301,7 @@ function AdminHeroPage() {
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                disabled={saving}
+                disabled={saving || loading}
               />
               {draft.image && (
                 <small style={{ display: "block", marginTop: 4, color: "var(--green-700)" }}>
@@ -276,6 +317,7 @@ function AdminHeroPage() {
                 min="1"
                 value={draft.order}
                 onChange={(event) => setDraft((prev) => ({ ...prev, order: event.target.value }))}
+                disabled={loading}
               />
             </label>
             <label className="switch-inline">
@@ -283,15 +325,16 @@ function AdminHeroPage() {
                 type="checkbox"
                 checked={draft.active}
                 onChange={(event) => setDraft((prev) => ({ ...prev, active: event.target.checked }))}
+                disabled={loading}
               />
               <span>Banner activo en el home</span>
             </label>
   
             <div className="hero-admin-actions">
-              <button type="submit" disabled={saving}>
+              <button type="submit" disabled={saving || loading}>
                 {saving ? "Guardando..." : draft.id ? "Guardar cambios" : "Crear banner"}
               </button>
-              <button type="button" className="admin-secondary-btn" onClick={resetDraft} disabled={saving}>
+              <button type="button" className="admin-secondary-btn" onClick={resetDraft} disabled={saving || loading}>
                 Limpiar formulario
               </button>
             </div>

@@ -736,7 +736,7 @@ function AdminProductsPage() {
                 setDraft((prev) => ({ ...prev, description: event.target.value }))
               }
             />
-            <label className="products-switch-inline" style={{ marginTop: "10px", width: "100%", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
+            <label className="admin-checkbox-label">
               <input
                 type="checkbox"
                 checked={draft.combo}

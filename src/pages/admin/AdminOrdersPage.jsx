@@ -6,6 +6,7 @@ import { useAdminOrdersData } from "../../hooks/useAdminOrdersData";
 import { ORDER_STATUSES } from "../../data/constants";
 import { formatCompactDate, formatCurrency } from "../../utils/currency";
 import { buildWhatsAppLink } from "../../utils/whatsapp";
+import { CONFIRMED_ORDER_STATUSES } from "../../utils/admin";
 
 function getOrderWhatsAppLink(order) {
   return buildWhatsAppLink(
@@ -60,7 +61,6 @@ function AdminOrdersPage() {
         </span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-card admin-table-card">
@@ -90,7 +90,7 @@ function AdminOrdersPage() {
           </select>
         </div>
 
-        {!visibleOrders.length ? (
+        {!loading && !visibleOrders.length ? (
           <AdminEmptyState
             title="No hay pedidos con los filtros actuales"
             description="Proba con otro estado o una busqueda mas amplia para volver a cargar el listado."
@@ -106,63 +106,97 @@ function AdminOrdersPage() {
                   <th>Total</th>
                   <th>Estado</th>
                   <th>Contacto</th>
-                  <th>Cambiar estado</th>
+                  <th>Pagado</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleOrders.map((order) => {
-                  const whatsappLink = getOrderWhatsAppLink(order);
+                {loading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td><div className="skeleton skeleton-text" style={{ width: 60 }}></div></td>
+                      <td>
+                        <div className="skeleton skeleton-text" style={{ width: 120 }}></div>
+                        <div className="skeleton skeleton-text" style={{ width: 80, height: 10 }}></div>
+                      </td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 70 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 90, height: 24, borderRadius: 999 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 32, height: 32, borderRadius: 12 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 24, height: 24, borderRadius: 6 }}></div></td>
+                    </tr>
+                  ))
+                ) : (
+                  visibleOrders.map((order) => {
+                    const whatsappLink = getOrderWhatsAppLink(order);
+                    const isPaid = CONFIRMED_ORDER_STATUSES.includes(order.status);
 
-                  return (
-                    <tr
-                      key={order.number}
-                      className={selectedNumber === order.number ? "is-selected" : ""}
-                      onClick={() => setSelectedNumber(order.number)}
-                    >
-                      <td>
-                        <b>#{order.number}</b>
-                      </td>
-                      <td>
-                        <b>{order.customer?.name}</b>
-                        <small>{order.customer?.phone}</small>
-                      </td>
-                      <td>{formatCompactDate(order.createdAt)}</td>
-                      <td>{formatCurrency(order.totals?.total || 0)}</td>
-                      <td>
-                        <OrderStatusBadge status={order.status} />
-                      </td>
-                      <td>
-                        {whatsappLink ? (
-                          <a
-                            href={whatsappLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="admin-whatsapp-btn compact icon-only"
-                            title="Contactar por WhatsApp"
+                    return (
+                      <tr
+                        key={order.number}
+                        className={selectedNumber === order.number ? "is-selected" : ""}
+                        onClick={() => setSelectedNumber(order.number)}
+                      >
+                        <td>
+                          <b>#{order.number}</b>
+                        </td>
+                        <td>
+                          <b>{order.customer?.name}</b>
+                          <small>{order.customer?.phone}</small>
+                        </td>
+                        <td>{formatCompactDate(order.createdAt)}</td>
+                        <td>{formatCurrency(order.totals?.total || 0)}</td>
+                        <td>
+                          <OrderStatusBadge status={order.status} />
+                        </td>
+                        <td>
+                          {whatsappLink ? (
+                            <a
+                              href={whatsappLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="admin-whatsapp-btn compact icon-only"
+                              title="Contactar por WhatsApp"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="18" height="18">
+                                <path fill="#25D366" d="M3.20676 47.591c-.00237 7.924 2.06817 15.6613 6.00506 22.4808l-6.38174 23.301 23.84542-6.2524c6.5694 3.5806 13.9665 5.4706 21.4944 5.4725h.0199c24.7897 0 44.9692-20.1724 44.9796-44.9664.0048-12.0148-4.6698-23.3123-13.1629-31.812C71.5149 7.3153 60.2212 2.63217 48.1879 2.62695 23.3953 2.62695 3.21718 22.798 3.20676 47.591Z" />
+                                <path fill="#ffffff" d="M1.60084 47.5769C1.598 55.7861 3.74293 63.8001 7.82006 70.8637L1.20947 95l24.70063-6.4765c6.8058 3.7109 14.4683 5.6672 22.2657 5.6701h.0199c25.6791 0 46.5836-20.8979 46.5945-46.5793.0042-12.4465-4.8386-24.15-13.6349-32.9544C72.3577 5.85655 60.6598 1.00521 48.1957 1 22.5119 1 1.61126 21.8945 1.60084 47.5769ZM16.3103 69.6474l-.9221-1.4641c-3.8772-6.1647-5.92355-13.2884-5.92071-20.6036C9.47603 26.2337 26.8483 8.86713 48.2104 8.86713 58.5551 8.8714 68.2777 12.904 75.59 20.221c7.3123 7.3175 11.3359 17.0448 11.333 27.3905-.0095 21.3465-17.3822 38.7154-38.7273 38.7154h-.0151c-6.9503-.0038-13.7666-1.8701-19.7114-5.3971l-1.4148-.8392-14.6578 3.8431 3.9137-14.2863Z" />
+                                <path fill="#ffffff" d="M36.55 28.1053c-.8723-1.9389-1.79-1.9777-2.6197-2.0118-.6789-.0289-1.4555-.0271-2.2311-.0271-.7766 0-2.0379.2919-3.1044 1.4565-1.0675 1.1651-4.0753 3.9815-4.0753 9.7093 0 5.7284 4.1724 11.2634 4.7538 12.041.5823.7761 8.0542 12.9065 19.8876 17.5731 9.8349 3.8781 11.8363 3.1068 13.9708 2.9125 2.1345-.1938 6.8882-2.8154 7.8581-5.5341.9704-2.7182.9704-5.0484.6795-5.535-.291-.4852-1.0675-.7766-2.2317-1.3585-1.1646-.5823-6.8882-3.3991-7.9552-3.7876-1.0675-.388-1.8436-.5818-2.6202.5837-.7761 1.1642-3.0059 3.7858-3.6853 4.5624-.679.778-1.3584.8751-2.5226.2928-1.1646-.5842-4.9143-1.8123-9.3624-5.7781-3.4612-3.086-5.7976-6.8968-6.477-8.0624-.679-1.1641-.0725-1.7948.5112-2.3752.5231-.5216 1.1647-1.3593 1.747-2.0388.5809-.6799.7746-1.1651 1.1627-1.9417.3885-.777.1943-1.4569-.0967-2.0392-.2914-.5823-2.5538-6.3396-3.5891-8.6418Z" />
+                              </svg>
+                            </a>
+                          ) : (
+                            <span className="admin-cell-muted" title="Sin teléfono">-</span>
+                          )}
+                        </td>
+                        <td>
+                          <div 
+                            className="admin-checkbox-cell" 
+                            title={isPaid ? "Pago confirmado" : "Pendiente de pago"}
                             onClick={(event) => event.stopPropagation()}
                           >
-                            <MessageCircle size={18} />
-                          </a>
-                        ) : (
-                          <span className="admin-cell-muted" title="Sin teléfono">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <select
-                          value={order.status}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={(event) => handleStatusChange(order.number, event.target.value)}
-                        >
-                          {ORDER_STATUSES.map((status) => (
-                            <option key={`${order.number}-${status}`} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            <input
+                              type="checkbox"
+                              checked={isPaid}
+                              onChange={(event) => {
+                                const isChecked = event.target.checked;
+                                if (!isChecked && ["En preparacion", "Despachado", "Entregado"].includes(order.status)) {
+                                  const confirm = window.confirm(
+                                    `El pedido ya está en estado "${order.status}". ¿Seguro que querés volverlo a Pendiente de Pago?`
+                                  );
+                                  if (!confirm) return;
+                                }
+                                handleStatusChange(
+                                  order.number,
+                                  isChecked ? "Pago confirmado" : "Pendiente de pago"
+                                );
+                              }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -177,6 +211,113 @@ function AdminOrdersPage() {
               <h2>Detalle operativo del pedido #{selectedOrder.number}</h2>
             </div>
             <OrderStatusBadge status={selectedOrder.status} />
+          </div>
+
+          <div className="admin-order-actions-bar" style={{ display: "flex", gap: "10px", margin: "16px 0", flexWrap: "wrap", borderBottom: "1px solid #efe7e1", paddingBottom: "16px" }}>
+            {selectedOrder.status === "Pendiente de pago" && (
+              <>
+                <button
+                  type="button"
+                  className="admin-action-btn primary"
+                  onClick={() => handleStatusChange(selectedOrder.number, "Pago confirmado")}
+                >
+                  Confirmar Pago
+                </button>
+                <button
+                  type="button"
+                  className="admin-action-btn secondary"
+                  onClick={() => handleStatusChange(selectedOrder.number, "Vencido")}
+                >
+                  Marcar Vencido
+                </button>
+                <button
+                  type="button"
+                  className="admin-action-btn danger"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que querés cancelar este pedido?")) {
+                      handleStatusChange(selectedOrder.number, "Cancelado");
+                    }
+                  }}
+                >
+                  Cancelar Pedido
+                </button>
+              </>
+            )}
+            {selectedOrder.status === "Pago confirmado" && (
+              <>
+                <button
+                  type="button"
+                  className="admin-action-btn primary"
+                  onClick={() => handleStatusChange(selectedOrder.number, "En preparacion")}
+                >
+                  Comenzar Preparación
+                </button>
+                <button
+                  type="button"
+                  className="admin-action-btn danger"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que querés cancelar este pedido?")) {
+                      handleStatusChange(selectedOrder.number, "Cancelado");
+                    }
+                  }}
+                >
+                  Cancelar Pedido
+                </button>
+              </>
+            )}
+            {selectedOrder.status === "En preparacion" && (
+              <>
+                <button
+                  type="button"
+                  className="admin-action-btn primary"
+                  onClick={() => handleStatusChange(selectedOrder.number, "Despachado")}
+                >
+                  Marcar Despachado
+                </button>
+                <button
+                  type="button"
+                  className="admin-action-btn danger"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que querés cancelar este pedido?")) {
+                      handleStatusChange(selectedOrder.number, "Cancelado");
+                    }
+                  }}
+                >
+                  Cancelar Pedido
+                </button>
+              </>
+            )}
+            {selectedOrder.status === "Despachado" && (
+              <>
+                <button
+                  type="button"
+                  className="admin-action-btn primary"
+                  onClick={() => handleStatusChange(selectedOrder.number, "Entregado")}
+                >
+                  Marcar Entregado
+                </button>
+                <button
+                  type="button"
+                  className="admin-action-btn danger"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que querés cancelar este pedido?")) {
+                      handleStatusChange(selectedOrder.number, "Cancelado");
+                    }
+                  }}
+                >
+                  Cancelar Pedido
+                </button>
+              </>
+            )}
+            {(selectedOrder.status === "Cancelado" || selectedOrder.status === "Vencido") && (
+              <button
+                type="button"
+                className="admin-action-btn secondary"
+                onClick={() => handleStatusChange(selectedOrder.number, "Pendiente de pago")}
+              >
+                Reabrir Pedido
+              </button>
+            )}
           </div>
 
           <div className="admin-detail-grid">
@@ -229,13 +370,17 @@ function AdminOrdersPage() {
               </div>
 
               {getOrderWhatsAppLink(selectedOrder) ? (
-                <a
+                 <a
                   href={getOrderWhatsAppLink(selectedOrder)}
                   target="_blank"
                   rel="noreferrer"
                   className="admin-whatsapp-btn"
                 >
-                  <MessageCircle size={18} />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="18" height="18">
+                    <path fill="#25D366" d="M3.20676 47.591c-.00237 7.924 2.06817 15.6613 6.00506 22.4808l-6.38174 23.301 23.84542-6.2524c6.5694 3.5806 13.9665 5.4706 21.4944 5.4725h.0199c24.7897 0 44.9692-20.1724 44.9796-44.9664.0048-12.0148-4.6698-23.3123-13.1629-31.812C71.5149 7.3153 60.2212 2.63217 48.1879 2.62695 23.3953 2.62695 3.21718 22.798 3.20676 47.591Z" />
+                    <path fill="#ffffff" d="M1.60084 47.5769C1.598 55.7861 3.74293 63.8001 7.82006 70.8637L1.20947 95l24.70063-6.4765c6.8058 3.7109 14.4683 5.6672 22.2657 5.6701h.0199c25.6791 0 46.5836-20.8979 46.5945-46.5793.0042-12.4465-4.8386-24.15-13.6349-32.9544C72.3577 5.85655 60.6598 1.00521 48.1957 1 22.5119 1 1.61126 21.8945 1.60084 47.5769ZM16.3103 69.6474l-.9221-1.4641c-3.8772-6.1647-5.92355-13.2884-5.92071-20.6036C9.47603 26.2337 26.8483 8.86713 48.2104 8.86713 58.5551 8.8714 68.2777 12.904 75.59 20.221c7.3123 7.3175 11.3359 17.0448 11.333 27.3905-.0095 21.3465-17.3822 38.7154-38.7273 38.7154h-.0151c-6.9503-.0038-13.7666-1.8701-19.7114-5.3971l-1.4148-.8392-14.6578 3.8431 3.9137-14.2863Z" />
+                    <path fill="#ffffff" d="M36.55 28.1053c-.8723-1.9389-1.79-1.9777-2.6197-2.0118-.6789-.0289-1.4555-.0271-2.2311-.0271-.7766 0-2.0379.2919-3.1044 1.4565-1.0675 1.1651-4.0753 3.9815-4.0753 9.7093 0 5.7284 4.1724 11.2634 4.7538 12.041.5823.7761 8.0542 12.9065 19.8876 17.5731 9.8349 3.8781 11.8363 3.1068 13.9708 2.9125 2.1345-.1938 6.8882-2.8154 7.8581-5.5341.9704-2.7182.9704-5.0484.6795-5.535-.291-.4852-1.0675-.7766-2.2317-1.3585-1.1646-.5823-6.8882-3.3991-7.9552-3.7876-1.0675-.388-1.8436-.5818-2.6202.5837-.7761 1.1642-3.0059 3.7858-3.6853 4.5624-.679.778-1.3584.8751-2.5226.2928-1.1646-.5842-4.9143-1.8123-9.3624-5.7781-3.4612-3.086-5.7976-6.8968-6.477-8.0624-.679-1.1641-.0725-1.7948.5112-2.3752.5231-.5216 1.1647-1.3593 1.747-2.0388.5809-.6799.7746-1.1651 1.1627-1.9417.3885-.777.1943-1.4569-.0967-2.0392-.2914-.5823-2.5538-6.3396-3.5891-8.6418Z" />
+                  </svg>
                   Abrir WhatsApp del cliente
                 </a>
               ) : null}

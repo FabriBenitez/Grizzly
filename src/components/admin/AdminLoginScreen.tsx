@@ -96,12 +96,13 @@ function AdminLoginScreen({ mode = "login" }: AdminLoginScreenProps) {
               placeholder="admin@grizzly.com"
               autoComplete="email"
               required
+              autoFocus
             />
           </label>
 
           <label>
             Contraseña
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <div className="admin-password-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
                 value={form.password}
@@ -109,13 +110,12 @@ function AdminLoginScreen({ mode = "login" }: AdminLoginScreenProps) {
                 placeholder="Ingresar contraseña"
                 autoComplete="current-password"
                 required
-                style={{ width: "100%", paddingRight: "40px" }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                style={{ position: "absolute", right: "8px", background: "transparent", border: "none", cursor: "pointer", color: "inherit", padding: "4px", display: "flex" }}
+                className="admin-password-toggle"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>

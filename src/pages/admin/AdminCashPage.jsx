@@ -70,6 +70,8 @@ function AdminCashPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     fetchCashMovements()
@@ -262,6 +264,8 @@ function AdminCashPage() {
     }
 
     setSaving(true);
+    setSubmitError("");
+    setSuccess("");
     try {
       const payload = {
         type: selectedType.id,
@@ -287,8 +291,10 @@ function AdminCashPage() {
         notes: "",
       });
       setSelectedMonth(toMonthInput(new Date()));
+      setSuccess("Movimiento registrado con éxito.");
+      setTimeout(() => setSuccess(""), 4000);
     } catch (err) {
-      alert(err.message || "No pudimos guardar el movimiento");
+      setSubmitError(err.message || "No pudimos guardar el movimiento");
     } finally {
       setSaving(false);
     }
@@ -305,8 +311,7 @@ function AdminCashPage() {
         </span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando movimientos de caja...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
 
       <section className="admin-card cash-toolbar-card">
         <div className="admin-card-title">
@@ -385,46 +390,58 @@ function AdminCashPage() {
       </section>
 
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={Wallet}
-          title="Saldo actual"
-          value={formatCurrency(summary.overallBalance)}
-          helper="Resultado acumulado de todos los movimientos registrados."
-          tone="highlight"
-        />
-        <AdminStatCard
-          icon={ArrowUpCircle}
-          title="Ingresos del mes"
-          value={formatCurrency(summary.monthIncome)}
-          helper="Entradas de dinero dentro del periodo seleccionado."
-        />
-        <AdminStatCard
-          icon={ArrowDownCircle}
-          title="Egresos del mes"
-          value={formatCurrency(summary.monthExpense)}
-          helper="Salidas entre gastos, retiros, reintegros y notas de credito."
-          tone="warn"
-        />
-        <AdminStatCard
-          icon={TrendingUp}
-          title="Resultado neto"
-          value={formatCurrency(summary.monthNet)}
-          helper={`Margen operativo estimado: ${summary.profitability}% sobre ingresos del mes.`}
-          tone={summary.monthNet >= 0 ? "default" : "danger"}
-        />
-        <AdminStatCard
-          icon={BadgeDollarSign}
-          title="Notas de credito"
-          value={formatCurrency(summary.creditNotesAmount)}
-          helper={`${summary.riskMovements} movimientos sensibles dentro del mes.`}
-          tone="danger"
-        />
-        <AdminStatCard
-          icon={HandCoins}
-          title="Apertura registrada"
-          value={formatCurrency(summary.openingAmount)}
-          helper={`${summary.filteredCount} movimientos visibles en el tablero actual.`}
-        />
+        {loading ? (
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={Wallet}
+              title="Saldo actual"
+              value={formatCurrency(summary.overallBalance)}
+              helper="Resultado acumulado de todos los movimientos registrados."
+              tone="highlight"
+            />
+            <AdminStatCard
+              icon={ArrowUpCircle}
+              title="Ingresos del mes"
+              value={formatCurrency(summary.monthIncome)}
+              helper="Entradas de dinero dentro del periodo seleccionado."
+            />
+            <AdminStatCard
+              icon={ArrowDownCircle}
+              title="Egresos del mes"
+              value={formatCurrency(summary.monthExpense)}
+              helper="Salidas entre gastos, retiros, reintegros y notas de credito."
+              tone="warn"
+            />
+            <AdminStatCard
+              icon={TrendingUp}
+              title="Resultado neto"
+              value={formatCurrency(summary.monthNet)}
+              helper={`Margen operativo estimado: ${summary.profitability}% sobre ingresos del mes.`}
+              tone={summary.monthNet >= 0 ? "default" : "danger"}
+            />
+            <AdminStatCard
+              icon={BadgeDollarSign}
+              title="Notas de credito"
+              value={formatCurrency(summary.creditNotesAmount)}
+              helper={`${summary.riskMovements} movimientos sensibles dentro del mes.`}
+              tone="danger"
+            />
+            <AdminStatCard
+              icon={HandCoins}
+              title="Apertura registrada"
+              value={formatCurrency(summary.openingAmount)}
+              helper={`${summary.filteredCount} movimientos visibles en el tablero actual.`}
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-two-col cash-top-grid">
@@ -435,6 +452,8 @@ function AdminCashPage() {
               <h2>Nuevo movimiento</h2>
             </div>
           </div>
+          {submitError && <div className="admin-message error" style={{ marginBottom: 12 }}>{submitError}</div>}
+          {success && <div className="admin-message success" style={{ marginBottom: 12 }}>{success}</div>}
           <form className="cash-form-grid" onSubmit={submitMovement}>
             <label>
               Tipo de movimiento
@@ -569,7 +588,18 @@ function AdminCashPage() {
               <h2>Impacto por medio</h2>
             </div>
           </div>
-          {paymentBreakdown.length ? (
+          {loading ? (
+            <div className="cash-breakdown-list">
+              {[...Array(3)].map((_, i) => (
+                <article key={i} className="cash-breakdown-item">
+                  <div style={{ width: "100%" }}>
+                    <div className="skeleton skeleton-title" style={{ width: "50%", margin: 0 }}></div>
+                    <div className="skeleton skeleton-text" style={{ width: "30%", margin: 0, height: 10 }}></div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : paymentBreakdown.length ? (
             <div className="cash-breakdown-list">
               {paymentBreakdown.map((item) => (
                 <article key={item.method} className="cash-breakdown-item">
@@ -604,7 +634,18 @@ function AdminCashPage() {
               <h2>Impacto por categoria</h2>
             </div>
           </div>
-          {categoryBreakdown.length ? (
+          {loading ? (
+            <div className="cash-breakdown-list">
+              {[...Array(3)].map((_, i) => (
+                <article key={i} className="cash-breakdown-item">
+                  <div style={{ width: "100%" }}>
+                    <div className="skeleton skeleton-title" style={{ width: "50%", margin: 0 }}></div>
+                    <div className="skeleton skeleton-text" style={{ width: "30%", margin: 0, height: 10 }}></div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : categoryBreakdown.length ? (
             <div className="cash-breakdown-list">
               {categoryBreakdown.slice(0, 8).map((item) => (
                 <article key={item.category} className="cash-breakdown-item">
@@ -657,34 +698,50 @@ function AdminCashPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredMovements.map((movement) => (
-                <tr key={movement.id}>
-                  <td>{formatCompactDate(movement.createdAt)}</td>
-                  <td>
-                    <span className={`cash-movement-type ${movement.direction || "neutral"}`}>
-                      {movement.label}
-                    </span>
-                  </td>
-                  <td>{movement.category}</td>
-                  <td>
-                    <b>{movement.reference}</b>
-                    {movement.notes && <small>{movement.notes}</small>}
-                  </td>
-                  <td>{movement.paymentMethod}</td>
-                  <td>
-                    <span
-                      className={`cash-amount ${signedAmount(movement) < 0 ? "out" : signedAmount(movement) > 0 ? "in" : "neutral"}`}
-                    >
-                      {signedAmount(movement) < 0 ? "-" : signedAmount(movement) > 0 ? "+" : ""}
-                      {formatCurrency(Math.abs(movement.amount))}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {loading ? (
+                [...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 70, height: 22, borderRadius: 8 }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                    <td>
+                      <div className="skeleton skeleton-title" style={{ width: "60%", margin: 0 }}></div>
+                      <div className="skeleton skeleton-text" style={{ width: "40%", margin: 0, height: 10 }}></div>
+                    </td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 60 }}></div></td>
+                  </tr>
+                ))
+              ) : (
+                filteredMovements.map((movement) => (
+                  <tr key={movement.id}>
+                    <td>{formatCompactDate(movement.createdAt)}</td>
+                    <td>
+                      <span className={`cash-movement-type ${movement.direction || "neutral"}`}>
+                        {movement.label}
+                      </span>
+                    </td>
+                    <td>{movement.category}</td>
+                    <td>
+                      <b>{movement.reference}</b>
+                      {movement.notes && <small>{movement.notes}</small>}
+                    </td>
+                    <td>{movement.paymentMethod}</td>
+                    <td>
+                      <span
+                        className={`cash-amount ${signedAmount(movement) < 0 ? "out" : signedAmount(movement) > 0 ? "in" : "neutral"}`}
+                      >
+                        {signedAmount(movement) < 0 ? "-" : signedAmount(movement) > 0 ? "+" : ""}
+                        {formatCurrency(Math.abs(movement.amount))}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {!filteredMovements.length ? (
+        {!filteredMovements.length && !loading ? (
           <AdminEmptyState
             compact
             title="No hay movimientos en este filtro"

@@ -35,12 +35,13 @@ function AdminFaqPage() {
     if (!draft.question.trim() || !draft.answer.trim()) return;
 
     setSaving(true);
+    setError("");
     try {
       await saveFaq(draft);
       await loadFaqs();
       setDraft({ id: null, question: "", answer: "", is_active: true, sort_order: faqs.length + 2 });
     } catch (err) {
-      alert(err.message || "No pudimos guardar la FAQ");
+      setError(err.message || "No pudimos guardar la FAQ");
     } finally {
       setSaving(false);
     }
@@ -52,6 +53,7 @@ function AdminFaqPage() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Seguro que quieres eliminar esta pregunta?")) return;
+    setError("");
     try {
       await deleteFaq(id);
       await loadFaqs();
@@ -59,12 +61,12 @@ function AdminFaqPage() {
         setDraft({ id: null, question: "", answer: "", is_active: true, sort_order: faqs.length });
       }
     } catch (err) {
-      alert(err.message || "No pudimos eliminar la FAQ");
+      setError(err.message || "No pudimos eliminar la FAQ");
     }
   };
 
   return (
-    <div className="admin-page-container">
+    <div className="admin-page-root">
       <header className="admin-page-header">
         <div className="admin-page-header-meta">
           <HelpCircle size={24} strokeWidth={1.5} />
@@ -75,38 +77,45 @@ function AdminFaqPage() {
         <span>Crea y edita las preguntas frecuentes que se muestran a los clientes.</span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando preguntas frecuentes...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
 
       <div className="admin-split-layout">
         <section className="admin-split-main">
-          {faqs.length === 0 && !loading && !error && (
+          {loading ? (
+            [...Array(3)].map((_, i) => (
+              <article key={i} className="admin-card" style={{ marginBottom: 16 }}>
+                <div className="skeleton skeleton-title" style={{ width: "60%", margin: 0 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: "90%", marginTop: 12 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: "40%", marginTop: 6 }}></div>
+              </article>
+            ))
+          ) : faqs.length === 0 && !error ? (
             <div className="admin-card">
               <p>No hay preguntas frecuentes registradas todavia.</p>
             </div>
-          )}
-
-          {faqs.map((faq) => (
-            <article key={faq.id} className="admin-card" style={{ marginBottom: 16 }}>
-              <div className="admin-card-header">
-                <h3>{faq.question}</h3>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <span className={`admin-status-badge ${faq.is_active ? "delivered" : "cancelled"}`}>
-                    {faq.is_active ? "Activa" : "Inactiva"}
-                  </span>
+          ) : (
+            faqs.map((faq) => (
+              <article key={faq.id} className="admin-card" style={{ marginBottom: 16 }}>
+                <div className="admin-card-header">
+                  <h3>{faq.question}</h3>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <span className={`admin-status-badge ${faq.is_active ? "delivered" : "cancelled"}`}>
+                      {faq.is_active ? "Activa" : "Inactiva"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <p style={{ marginTop: 8, whiteSpace: "pre-wrap", color: "#666" }}>{faq.answer}</p>
-              <div className="admin-card-actions" style={{ marginTop: 16 }}>
-                <button type="button" onClick={() => handleEdit(faq)} className="admin-button-secondary">
-                  Editar
-                </button>
-                <button type="button" onClick={() => handleDelete(faq.id)} className="admin-button-danger">
-                  <Trash2 size={16} /> Eliminar
-                </button>
-              </div>
-            </article>
-          ))}
+                <p style={{ marginTop: 8, whiteSpace: "pre-wrap", color: "#666" }}>{faq.answer}</p>
+                <div className="admin-card-actions" style={{ marginTop: 16 }}>
+                  <button type="button" onClick={() => handleEdit(faq)} className="admin-button-secondary">
+                    Editar
+                  </button>
+                  <button type="button" onClick={() => handleDelete(faq.id)} className="admin-button-danger">
+                    <Trash2 size={16} /> Eliminar
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
         </section>
 
         <aside className="admin-split-sidebar">

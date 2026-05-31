@@ -63,37 +63,48 @@ function AdminPaymentsPage() {
         </span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando estados de pago reales...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
 
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={Wallet}
-          title="Monto esperado"
-          value={formatCurrency(summary.expected)}
-          helper="Suma operativa de pedidos en circuito de pago."
-          tone="highlight"
-        />
-        <AdminStatCard
-          icon={TimerReset}
-          title="Pendientes"
-          value={summary.pending}
-          helper="Reservas esperando verificacion manual."
-          tone="warn"
-        />
-        <AdminStatCard
-          icon={ShieldCheck}
-          title="Confirmados"
-          value={summary.confirmed}
-          helper="Cobros listos para pasar a armado."
-        />
-        <AdminStatCard
-          icon={CircleHelp}
-          title="Vencidos"
-          value={summary.expired}
-          helper="Pedidos a revisar por falta de acreditacion."
-          tone="danger"
-        />
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={Wallet}
+              title="Monto esperado"
+              value={formatCurrency(summary.expected)}
+              helper="Suma operativa de pedidos en circuito de pago."
+              tone="highlight"
+            />
+            <AdminStatCard
+              icon={TimerReset}
+              title="Pendientes"
+              value={summary.pending}
+              helper="Reservas esperando verificacion manual."
+              tone="warn"
+            />
+            <AdminStatCard
+              icon={ShieldCheck}
+              title="Confirmados"
+              value={summary.confirmed}
+              helper="Cobros listos para pasar a armado."
+            />
+            <AdminStatCard
+              icon={CircleHelp}
+              title="Vencidos"
+              value={summary.expired}
+              helper="Pedidos a revisar por falta de acreditacion."
+              tone="danger"
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-card payment-config">
@@ -170,7 +181,7 @@ function AdminPaymentsPage() {
           </label>
         </div>
 
-        {!paymentOrders.length ? (
+        {!paymentOrders.length && !loading ? (
           <AdminEmptyState
             title="No hay pedidos en etapas de pago"
             description="Cuando aparezcan reservas o cobros manuales por validar, se listan aca."
@@ -189,42 +200,64 @@ function AdminPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paymentOrders.map((order) => (
-                  <tr key={order.number}>
-                    <td>
-                      <b>#{order.number}</b>
-                    </td>
-                    <td>
-                      <b>{order.customer?.name}</b>
-                      <small>{order.customer?.phone}</small>
-                    </td>
-                    <td>{formatCompactDate(order.createdAt)}</td>
-                    <td>{formatCurrency(order.totals?.total || 0)}</td>
-                    <td>
-                      <OrderStatusBadge status={order.status} />
-                    </td>
-                    <td>
-                      <div className="table-actions payment-actions">
-                        {[
-                          ["Pendiente", "Pendiente de pago"],
-                          ["Confirmar", "Pago confirmado"],
-                          ["Preparar", "En preparacion"],
-                          ["Vencer", "Vencido"],
-                          ["Cancelar", "Cancelado"],
-                        ].map(([label, targetStatus]) => (
-                          <button
-                            key={`${order.number}-${targetStatus}`}
-                            type="button"
-                            className={`admin-action-btn ${getActionTone(order.status, targetStatus)}`}
-                            onClick={() => changeStatus(order.number, targetStatus)}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td><div className="skeleton skeleton-text" style={{ width: 60 }}></div></td>
+                      <td>
+                        <div className="skeleton skeleton-title" style={{ width: 120, margin: 0 }}></div>
+                        <div className="skeleton skeleton-text" style={{ width: 80, height: 10, margin: 0 }}></div>
+                      </td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 70 }}></div></td>
+                      <td><div className="skeleton skeleton-text" style={{ width: 90, height: 24, borderRadius: 999 }}></div></td>
+                      <td>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          {[...Array(4)].map((_, idx) => (
+                            <div key={idx} className="skeleton" style={{ width: 64, height: 30, borderRadius: 8 }}></div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  paymentOrders.map((order) => (
+                    <tr key={order.number}>
+                      <td>
+                        <b>#{order.number}</b>
+                      </td>
+                      <td>
+                        <b>{order.customer?.name}</b>
+                        <small>{order.customer?.phone}</small>
+                      </td>
+                      <td>{formatCompactDate(order.createdAt)}</td>
+                      <td>{formatCurrency(order.totals?.total || 0)}</td>
+                      <td>
+                        <OrderStatusBadge status={order.status} />
+                      </td>
+                      <td>
+                        <div className="table-actions payment-actions">
+                          {[
+                            ["Pendiente", "Pendiente de pago"],
+                            ["Confirmar", "Pago confirmado"],
+                            ["Preparar", "En preparacion"],
+                            ["Vencer", "Vencido"],
+                            ["Cancelar", "Cancelado"],
+                          ].map(([label, targetStatus]) => (
+                            <button
+                              key={`${order.number}-${targetStatus}`}
+                              type="button"
+                              className={`admin-action-btn ${getActionTone(order.status, targetStatus)}`}
+                              onClick={() => changeStatus(order.number, targetStatus)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

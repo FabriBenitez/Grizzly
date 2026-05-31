@@ -25,7 +25,6 @@ const dashboardMetricConfig = [
     key: "totalOrders",
     title: "Pedidos totales",
     icon: ClipboardList,
-    trend: { value: "+12%", positive: true },
   },
   {
     key: "pendingPayment",
@@ -37,7 +36,6 @@ const dashboardMetricConfig = [
     key: "confirmedPayment",
     title: "Pago confirmado",
     icon: CheckCircle2,
-    trend: { value: "+5%", positive: true },
   },
   {
     key: "inPreparation",
@@ -59,7 +57,6 @@ const dashboardMetricConfig = [
     title: "Cancelado",
     icon: PackageX,
     tone: "danger",
-    trend: { value: "-2%", positive: false },
   },
   {
     key: "confirmedRevenue",
@@ -67,7 +64,6 @@ const dashboardMetricConfig = [
     icon: BadgeDollarSign,
     format: formatCurrency,
     tone: "highlight",
-    trend: { value: "+18%", positive: true },
   },
 ];
 
@@ -105,20 +101,29 @@ function AdminOverviewPage() {
         </div>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando pedidos reales...</section>}
       {!loading && error && <section className="admin-demo-note">{error}</section>}
 
       <section className="admin-kpi-grid">
-        {dashboardMetricConfig.map((item) => (
-          <AdminStatCard
-            key={item.key}
-            icon={item.icon}
-            title={item.title}
-            value={item.format ? item.format(metrics[item.key]) : metrics[item.key]}
-            trend={item.trend}
-            tone={item.tone}
-          />
-        ))}
+        {loading ? (
+          [...Array(8)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          dashboardMetricConfig.map((item) => (
+            <AdminStatCard
+              key={item.key}
+              icon={item.icon}
+              title={item.title}
+              value={item.format ? item.format(metrics[item.key]) : metrics[item.key]}
+              trend={item.trend}
+              tone={item.tone}
+            />
+          ))
+        )}
       </section>
 
       <section className="admin-card">
@@ -236,41 +241,41 @@ function AdminOverviewPage() {
             </ul>
           )}
         </article>
-      </section>
 
-      <section className="admin-card">
-        <div className="admin-card-title">
-          <div>
-            <span className="admin-card-kicker">Inventario</span>
-            <h2>Alertas de stock bajo</h2>
+        <article className="admin-card">
+          <div className="admin-card-title">
+            <div>
+              <span className="admin-card-kicker">Inventario</span>
+              <h2>Alertas de stock bajo</h2>
+            </div>
+            <Link to="/admin/stock">Configurar umbral global</Link>
           </div>
-          <Link to="/admin/stock">Configurar umbral global</Link>
-        </div>
-        {loadingCatalog && <p className="admin-threshold-help">Cargando inventario real...</p>}
-        {!loadingCatalog && catalogError && <p className="admin-threshold-help">{catalogError}</p>}
-        {!lowStockProducts.length ? (
-          <AdminEmptyState
-            compact
-            title="No hay alertas criticas por ahora"
-            description="El stock actual esta por encima del umbral definido para toda la tienda."
-          />
-        ) : (
-          <ul className="stock-alerts">
-            {lowStockProducts.map((product) => (
-              <li key={product.id}>
-                <img src={product.image} alt={product.name} />
-                <div>
-                  <b>{product.name}</b>
-                  <small>{product.category}</small>
-                </div>
-                <strong>
-                  <AlertTriangle size={15} />
-                  {product.stock} u.
-                </strong>
-              </li>
-            ))}
-          </ul>
-        )}
+          {loadingCatalog && <p className="admin-threshold-help">Cargando inventario real...</p>}
+          {!loadingCatalog && catalogError && <p className="admin-threshold-help">{catalogError}</p>}
+          {!lowStockProducts.length ? (
+            <AdminEmptyState
+              compact
+              title="No hay alertas criticas por ahora"
+              description="El stock actual esta por encima del umbral definido para toda la tienda."
+            />
+          ) : (
+            <ul className="stock-alerts">
+              {lowStockProducts.map((product) => (
+                <li key={product.id}>
+                  <img src={product.image} alt={product.name} />
+                  <div>
+                    <b>{product.name}</b>
+                    <small>{product.category}</small>
+                  </div>
+                  <strong>
+                    <AlertTriangle size={15} />
+                    {product.stock} u.
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
       </section>
     </div>
   );

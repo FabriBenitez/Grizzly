@@ -11,7 +11,8 @@ function AdminStockPage() {
     useAdminCatalogData();
   const { stock_threshold: contextThreshold } = useStoreSettings();
   const [threshold, setThreshold] = useState(contextThreshold);
-  const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const rows = useMemo(
     () =>
@@ -36,11 +37,13 @@ function AdminStockPage() {
     event.preventDefault();
     const safe = Math.max(1, Number(threshold || 1));
     setThreshold(safe);
+    setSuccessMessage("");
+    setErrorMessage("");
     try {
       await saveStoreSetting("stock_threshold", String(safe), "Umbral global de stock bajo");
-      setMessage("Umbral global de stock actualizado.");
+      setSuccessMessage("Umbral global de stock actualizado.");
     } catch {
-      setMessage("No pudimos guardar el umbral en la base.");
+      setErrorMessage("No pudimos guardar el umbral en la base.");
     }
   };
 
@@ -52,15 +55,18 @@ function AdminStockPage() {
           : product,
       ),
     );
-    setMessage("");
+    setSuccessMessage("");
+    setErrorMessage("");
   };
 
   const saveInventory = async () => {
+    setSuccessMessage("");
+    setErrorMessage("");
     try {
       await saveProducts(products);
-      setMessage("Inventario sincronizado con la base actual.");
+      setSuccessMessage("Inventario sincronizado con la base actual.");
     } catch {
-      setMessage("Actualizamos el stock en pantalla, pero no pudimos persistirlo todavia.");
+      setErrorMessage("Actualizamos el stock en pantalla, pero no pudimos persistirlo todavia.");
     }
   };
 
@@ -75,8 +81,7 @@ function AdminStockPage() {
         </span>
       </header>
 
-      {loading && <section className="admin-demo-note">Cargando stock real...</section>}
-      {!loading && error && <section className="admin-demo-note">{error}</section>}
+      {!loading && error && <div className="admin-message error" style={{ margin: "12px 0 0" }}>{error}</div>}
 
       <section className="admin-card">
         <div className="admin-card-title">
@@ -101,37 +106,50 @@ function AdminStockPage() {
           Regla actual: stock <b>{"<="}</b> {threshold} se marca como bajo. Stock <b>{"<="}</b>{" "}
           {Math.max(1, Math.floor(threshold / 2))} se marca como critico.
         </p>
-        {message && <p className="admin-message">{message}</p>}
+        {successMessage && <div className="admin-message success">{successMessage}</div>}
+        {errorMessage && <div className="admin-message error">{errorMessage}</div>}
       </section>
 
       <section className="admin-kpi-grid">
-        <AdminStatCard
-          icon={TriangleAlert}
-          title="Productos criticos"
-          value={summary.critical}
-          helper="Necesitan reposicion inmediata."
-          tone="danger"
-        />
-        <AdminStatCard
-          icon={AlertCircle}
-          title="Productos bajos"
-          value={summary.low}
-          helper="Todavia venden, pero ya merecen seguimiento."
-          tone="warn"
-        />
-        <AdminStatCard
-          icon={PackageCheck}
-          title="Stock saludable"
-          value={summary.ok}
-          helper="Estan por encima del umbral definido."
-        />
-        <AdminStatCard
-          icon={Boxes}
-          title="Total productos"
-          value={rows.length}
-          helper="Catalogo hoy controlado desde inventario."
-          tone="highlight"
-        />
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: "40%" }}></div>
+              <div className="skeleton skeleton-text" style={{ height: 32, width: "70%" }}></div>
+              <div className="skeleton skeleton-text" style={{ width: "90%" }}></div>
+            </div>
+          ))
+        ) : (
+          <>
+            <AdminStatCard
+              icon={TriangleAlert}
+              title="Productos criticos"
+              value={summary.critical}
+              helper="Necesitan reposicion inmediata."
+              tone="danger"
+            />
+            <AdminStatCard
+              icon={AlertCircle}
+              title="Productos bajos"
+              value={summary.low}
+              helper="Todavia venden, pero ya merecen seguimiento."
+              tone="warn"
+            />
+            <AdminStatCard
+              icon={PackageCheck}
+              title="Stock saludable"
+              value={summary.ok}
+              helper="Estan por encima del umbral definido."
+            />
+            <AdminStatCard
+              icon={Boxes}
+              title="Total productos"
+              value={rows.length}
+              helper="Catalogo hoy controlado desde inventario."
+              tone="highlight"
+            />
+          </>
+        )}
       </section>
 
       <section className="admin-card admin-table-card">
@@ -156,46 +174,71 @@ function AdminStockPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <div className="table-product">
-                      <img src={product.image} alt={product.name} />
-                      <div>
-                        <b>{product.name}</b>
-                        <small>{product.brand}</small>
+              {loading ? (
+                [...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td>
+                      <div className="table-product" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        <div className="skeleton" style={{ width: 58, height: 58, borderRadius: 14 }}></div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                          <div className="skeleton skeleton-title" style={{ width: "70%", margin: 0 }}></div>
+                          <div className="skeleton skeleton-text" style={{ width: "40%", margin: 0, height: 10 }}></div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>{product.category}</td>
-                  <td>
-                    <div className="stock-level-cell">
-                      <label className="products-table-input-shell unit">
-                        <span>u</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={product.stock}
-                          onChange={(event) => updateStock(product.id, event.target.value)}
-                        />
-                      </label>
-                      <span>
-                        <i className={product.level} style={{ width: `${product.percent}%` }} />
+                    </td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 80 }}></div></td>
+                    <td>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div className="skeleton skeleton-text" style={{ width: 60, height: 24, borderRadius: 8 }}></div>
+                        <div className="skeleton skeleton-text" style={{ width: 100, height: 8, borderRadius: 4 }}></div>
+                      </div>
+                    </td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 40 }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: 70, height: 22, borderRadius: 999 }}></div></td>
+                  </tr>
+                ))
+              ) : (
+                rows.map((product) => (
+                  <tr key={product.id}>
+                    <td>
+                      <div className="table-product">
+                        <img src={product.image} alt={product.name} />
+                        <div>
+                          <b>{product.name}</b>
+                          <small>{product.brand}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{product.category}</td>
+                    <td>
+                      <div className="stock-level-cell">
+                        <label className="products-table-input-shell unit">
+                          <span>u</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={product.stock}
+                            onChange={(event) => updateStock(product.id, event.target.value)}
+                          />
+                        </label>
+                        <span>
+                          <i className={product.level} style={{ width: `${product.percent}%` }} />
+                        </span>
+                      </div>
+                    </td>
+                    <td>{threshold} u.</td>
+                    <td>
+                      <span className={`stock-pill ${product.level}`}>
+                        {product.level === "critico"
+                          ? "Critico"
+                          : product.level === "bajo"
+                            ? "Bajo"
+                            : "Saludable"}
                       </span>
-                    </div>
-                  </td>
-                  <td>{threshold} u.</td>
-                  <td>
-                    <span className={`stock-pill ${product.level}`}>
-                      {product.level === "critico"
-                        ? "Critico"
-                        : product.level === "bajo"
-                          ? "Bajo"
-                          : "Saludable"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
