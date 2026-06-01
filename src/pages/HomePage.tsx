@@ -50,7 +50,8 @@ function HomePage() {
         if (activo && remoteSlides.length) {
           setDiapositivasHero(remoteSlides);
         }
-      } catch {
+      } catch (error) {
+        console.error("Error al cargar los banners promocionales desde Supabase:", error);
         // Si falla la carga remota, mantenemos el fallback visual local.
       }
     };

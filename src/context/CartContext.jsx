@@ -67,7 +67,7 @@ export function CartProvider({ children }) {
     const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const total = items.reduce((acc, item) => acc + getEffectivePrice(item) * item.quantity, 0);
     const discount = subtotal - total;
-    const shipping = total >= 50 || total === 0 ? 0 : 10;
+    const shipping = 0; // El costo de envío real se calcula en el CheckoutPage
     const grandTotal = total + shipping;
     const count = items.reduce((acc, item) => acc + item.quantity, 0);
 

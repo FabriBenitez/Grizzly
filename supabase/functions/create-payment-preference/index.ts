@@ -151,6 +151,27 @@ async function createNewOrder(payload: CheckoutPayload) {
     throw new Error(validated.errors.join(" "));
   }
 
+  // Validar stock real en la base de datos
+  const productIds = validated.items.map(item => item.productId);
+  const { data: dbProducts, error: dbProductsError } = await supabase
+    .from("products")
+    .select("id, name, stock")
+    .in("id", productIds);
+
+  if (dbProductsError) {
+    throw new Error(dbProductsError.message || "No pudimos validar el stock de los productos.");
+  }
+
+  for (const item of validated.items) {
+    const dbProduct = dbProducts?.find((p) => p.id === item.productId);
+    if (!dbProduct) {
+      throw new Error(`El producto ${item.name || item.productId} ya no esta disponible.`);
+    }
+    if (dbProduct.stock < item.quantity) {
+      throw new Error(`No hay stock suficiente para "${dbProduct.name}". Solicitado: ${item.quantity}, Disponible: ${dbProduct.stock}.`);
+    }
+  }
+
   const subtotal = getBaseSubtotalFromOrderItems(validated.items);
   const effectiveSubtotal = getEffectiveSubtotalFromOrderItems(validated.items);
   const shippingCost = validated.totals.shipping;
