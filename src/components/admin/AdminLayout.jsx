@@ -16,6 +16,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  PackagePlus,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useMemo, useState } from "react";
@@ -27,6 +28,7 @@ const adminNav = [
   { to: "/admin/pedidos", label: "Pedidos", icon: PackageCheck },
   { to: "/admin/pagos", label: "Pagos", icon: Wallet },
   { to: "/admin/productos", label: "Productos", icon: Boxes },
+  { to: "/admin/combos", label: "Combos", icon: PackagePlus },
   { to: "/admin/promociones", label: "Promociones", icon: Percent },
   { to: "/admin/hero", label: "Hero", icon: Image },
   { to: "/admin/clientes", label: "Clientes", icon: Users },

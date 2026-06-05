@@ -15,6 +15,7 @@ import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
+import AdminCombosPage from "./pages/admin/AdminCombosPage";
 import AdminPromotionsPage from "./pages/admin/AdminPromotionsPage";
 import AdminHeroPage from "./pages/admin/AdminHeroPage";
 import AdminCustomersPage from "./pages/admin/AdminCustomersPage";
@@ -33,6 +34,7 @@ function App() {
         <Route path="pedidos" element={<AdminOrdersPage />} />
         <Route path="pagos" element={<AdminPaymentsPage />} />
         <Route path="productos" element={<AdminProductsPage />} />
+        <Route path="combos" element={<AdminCombosPage />} />
         <Route path="promociones" element={<AdminPromotionsPage />} />
         <Route path="hero" element={<AdminHeroPage />} />
         <Route path="clientes" element={<AdminCustomersPage />} />
