@@ -121,7 +121,7 @@ function extractMetadata(description) {
   const normalized = normalizeText(description);
   const parts = normalized.split("---META---");
   const cleanDescription = parts[0].trim();
-  let meta = { combo: false, tags: "" };
+  let meta = { combo: false, tags: "", promo: false };
   
   if (parts.length > 1) {
     try {
@@ -158,7 +158,7 @@ export function normalizeRemoteCatalogProduct(row) {
     stock: Math.max(0, Math.round(normalizeNumber(row?.stock))),
     sold: 0,
     featured: Boolean(row?.is_featured),
-    promo: promoPrice != null && promoPrice > 0,
+    promo: promoPrice != null && promoPrice > 0 || Boolean(meta.promo) || Boolean(meta.combo),
     combo: Boolean(meta.combo),
     searchTags: meta.tags || "",
     active: Boolean(row?.is_active),
@@ -233,9 +233,10 @@ function buildProductPayload(product, categoryIdMap, brandIdMap) {
   const normalizedName = normalizeText(product?.name);
   let description = normalizeText(product?.description) || "";
   
-  if (product?.combo || product?.searchTags) {
+  if (product?.combo || product?.searchTags || product?.promo) {
     const meta = {};
     if (product?.combo) meta.combo = true;
+    if (product?.promo) meta.promo = true;
     if (product?.searchTags) meta.tags = product.searchTags;
     // Evitar duplicar el meta si ya lo trajo
     description = description.split("---META---")[0].trim();

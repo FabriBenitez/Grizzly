@@ -1,7 +1,7 @@
-import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules";
-import { normalizeCouponCode } from "./coupons";
-import type { CouponDefinition } from "./coupons";
-import { getBaseSubtotalFromOrderItems } from "./coupons";
+import { hasLettersOnly, hasNumbersOnly } from "../forms/inputRules.ts";
+import { normalizeCouponCode } from "./coupons.ts";
+import type { CouponDefinition } from "./coupons.ts";
+import { getBaseSubtotalFromOrderItems } from "./coupons.ts";
 
 export const PAYMENT_METHODS = {
   mercadoPago: "mercadopago",
@@ -342,22 +342,53 @@ export function normalizeExistingOrder(order: Record<string, unknown>): Normaliz
 }
 
 export function buildMercadoPagoItems(order: NormalizedExistingOrder) {
-  return order.items.map((item) => ({
-    id: item.id || item.name,
-    title: item.name,
-    quantity: item.quantity,
-    currency_id: "ARS",
-    unit_price: Number((item.lineTotal / item.quantity).toFixed(2)),
-  }));
+  const effectiveSubtotal = order.items.reduce((acc, item) => acc + item.lineTotal, 0);
+  const subtotalBase = order.items.reduce((acc, item) => acc + item.basePrice * item.quantity, 0);
+  const productDiscount = Math.max(0, subtotalBase - effectiveSubtotal);
+  const couponDiscount = Math.max(0, order.discount - productDiscount);
+
+  let remainingDiscount = couponDiscount;
+
+  return order.items.map((item, index) => {
+    let itemLineTotal = item.lineTotal;
+
+    if (remainingDiscount > 0) {
+      const ratio = effectiveSubtotal > 0 ? item.lineTotal / effectiveSubtotal : 0;
+      let discountToApply = index === order.items.length - 1
+        ? remainingDiscount
+        : Number((couponDiscount * ratio).toFixed(2));
+
+      discountToApply = Math.min(discountToApply, itemLineTotal);
+      itemLineTotal = Number((itemLineTotal - discountToApply).toFixed(2));
+      remainingDiscount = Number((remainingDiscount - discountToApply).toFixed(2));
+    }
+
+    return {
+      id: item.id || item.name,
+      title: item.name,
+      quantity: item.quantity,
+      currency_id: "ARS",
+      unit_price: Number((itemLineTotal / item.quantity).toFixed(2)),
+    };
+  });
 }
 
 export function buildMercadoPagoShipments(order: NormalizedExistingOrder) {
   const shippingAddress = order.shippingAddress ?? {};
 
+  const effectiveSubtotal = order.items.reduce((acc, item) => acc + item.lineTotal, 0);
+  const subtotalBase = order.items.reduce((acc, item) => acc + item.basePrice * item.quantity, 0);
+  const productDiscount = Math.max(0, subtotalBase - effectiveSubtotal);
+  const couponDiscount = Math.max(0, order.discount - productDiscount);
+  
+  const discountOnItems = Math.min(couponDiscount, effectiveSubtotal);
+  const discountOnShipping = Math.max(0, couponDiscount - discountOnItems);
+  const finalShippingCost = Number(Math.max(0, order.shippingCost - discountOnShipping).toFixed(2));
+
   return {
     local_pickup: order.shippingType === "pickup",
-    cost: order.shippingCost,
-    free_shipping: order.shippingCost === 0,
+    cost: finalShippingCost,
+    free_shipping: finalShippingCost === 0,
     receiver_address: {
       zip_code: normalizeText(shippingAddress.postalCode),
       street_name: normalizeText(shippingAddress.address),

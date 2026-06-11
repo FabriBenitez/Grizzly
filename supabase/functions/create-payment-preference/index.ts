@@ -152,7 +152,7 @@ async function createNewOrder(payload: CheckoutPayload) {
   }
 
   // Validar stock real en la base de datos
-  const productIds = validated.items.map(item => item.productId);
+  const productIds = validated.items.map(item => item.product_id).filter(Boolean);
   const { data: dbProducts, error: dbProductsError } = await supabase
     .from("products")
     .select("id, name, stock")
@@ -163,9 +163,10 @@ async function createNewOrder(payload: CheckoutPayload) {
   }
 
   for (const item of validated.items) {
-    const dbProduct = dbProducts?.find((p) => p.id === item.productId);
+    if (!item.product_id) continue;
+    const dbProduct = dbProducts?.find((p) => p.id === item.product_id);
     if (!dbProduct) {
-      throw new Error(`El producto ${item.name || item.productId} ya no esta disponible.`);
+      throw new Error(`El producto ${item.product_name || item.product_id} ya no esta disponible.`);
     }
     if (dbProduct.stock < item.quantity) {
       throw new Error(`No hay stock suficiente para "${dbProduct.name}". Solicitado: ${item.quantity}, Disponible: ${dbProduct.stock}.`);

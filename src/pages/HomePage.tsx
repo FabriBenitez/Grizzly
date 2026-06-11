@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/ui/ProductCard";
+import ProductCarousel from "../components/ui/ProductCarousel";
 import SectionTitle from "../components/ui/SectionTitle";
 import { useCatalogProducts } from "../hooks/useCatalogProducts";
 import {
@@ -36,10 +37,22 @@ function HomePage() {
     () => getActiveDefaultHeroSlides() as DiapositivaHero[],
   );
 
-  const promociones = useMemo(() => getPromoProducts(productos, 6), [productos]);
-  const combos = useMemo(() => getComboProducts(productos, 6), [productos]);
-  const destacados = useMemo(() => getHighlightedProducts(productos, 6), [productos]);
-  const masVendidos = useMemo(() => getMostSoldProducts(productos, 6), [productos]);
+  const promociones = useMemo(() => getPromoProducts(productos, 10), [productos]);
+  const combos = useMemo(() => getComboProducts(productos, 10), [productos]);
+  const destacados = useMemo(() => getHighlightedProducts(productos, 10), [productos]);
+  const masVendidos = useMemo(() => getMostSoldProducts(productos, 10), [productos]);
+
+  const tendencias = useMemo(() => {
+    const combined = [...destacados, ...masVendidos];
+    const unique = combined.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i);
+    return unique.slice(0, 12);
+  }, [destacados, masVendidos]);
+
+  const ofertasYCombos = useMemo(() => {
+    const combined = [...promociones, ...combos];
+    const unique = combined.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i);
+    return unique.slice(0, 12);
+  }, [promociones, combos]);
 
   useEffect(() => {
     let activo = true;
@@ -137,34 +150,6 @@ function HomePage() {
         </article>
       </section>
 
-      <section className="container section-space" aria-labelledby="promociones-destacadas">
-        <SectionTitle
-          id="promociones-destacadas"
-          eyebrow="Marzo activo"
-          title="Promos de marzo"
-          subtitle="Selecciones destacadas, packs utiles y beneficios reales para comprar online."
-        />
-        <div className="product-grid six-col">
-          {promociones.map((producto, index) => (
-            <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
-          ))}
-        </div>
-      </section>
-
-      <section className="container section-space" aria-labelledby="seleccion-admin">
-        <SectionTitle
-          id="seleccion-admin"
-          eyebrow="Curaduria Grizzly"
-          title="Seleccion destacada por el equipo"
-          subtitle="Productos marcados desde el panel para priorizar lanzamientos, margen o rotacion."
-        />
-        <div className="product-grid six-col">
-          {destacados.map((producto, index) => (
-            <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
-          ))}
-        </div>
-      </section>
-
       <section
         className={`container section-space ${estilos["inicio__seccion-categorias"]}`}
         aria-labelledby="categorias-destacadas"
@@ -185,48 +170,57 @@ function HomePage() {
                 key={categoria}
                 className={estilos["inicio__categoria-card"]}
               >
-                <img
-                  src={productoRelacionado?.image || "/assets/products/combo-estrella.jpg"}
-                  alt={`Explorar categoria ${categoria}`}
-                  className={estilos["inicio__categoria-imagen"]}
-                />
-                <span className={estilos["inicio__categoria-titulo"]}>{categoria}</span>
+                <div className={estilos["inicio__categoria-imagen-container"]}>
+                  <img
+                    src={productoRelacionado?.image || "/assets/products/combo-estrella.jpg"}
+                    alt={`Explorar categoria ${categoria}`}
+                    className={estilos["inicio__categoria-imagen"]}
+                  />
+                </div>
+                <div className={estilos["inicio__categoria-caja-verde"]}>
+                  <span className={estilos["inicio__categoria-titulo"]}>{categoria}</span>
+                </div>
+                <span className={estilos["inicio__categoria-subtitulo"]}>{categoria}</span>
               </Link>
             );
           })}
         </div>
       </section>
 
-      <section className="combo-section" aria-labelledby="combos-destacados">
-        <div className="container section-space">
+      {ofertasYCombos.length > 0 && (
+        <section className="container section-space" aria-labelledby="promociones-destacadas">
           <SectionTitle
-            id="combos-destacados"
-            eyebrow="Aprovecha packs"
-            title="Combos destacados"
-            subtitle="Kits armados para fuerza, energia y recuperacion."
-            light
+            id="promociones-destacadas"
+            eyebrow="Marzo activo"
+            title="Ofertas y Combos"
+            subtitle="Packs utiles y descuentos reales para tu entrenamiento."
           />
-          <div className="product-grid six-col">
-            {combos.map((producto, index) => (
+          <ProductCarousel autoPlayInterval={5000}>
+            {ofertasYCombos.map((producto, index) => (
               <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
             ))}
-          </div>
-        </div>
-      </section>
+          </ProductCarousel>
+        </section>
+      )}
 
-      <section className="container section-space" aria-labelledby="mas-elegidos">
-        <SectionTitle
-          id="mas-elegidos"
-          eyebrow="Top ventas"
-          title="Los mas elegidos"
-          subtitle="Productos con mejor rendimiento segun la comunidad."
-        />
-        <div className="product-grid six-col">
-          {masVendidos.map((producto, index) => (
-            <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
-          ))}
-        </div>
-      </section>
+      {tendencias.length > 0 && (
+        <section className="combo-section" aria-labelledby="tendencias-grizzly">
+          <div className="container section-space">
+            <SectionTitle
+              id="tendencias-grizzly"
+              eyebrow="Curaduria Grizzly"
+              title="Tendencias y Favoritos"
+              subtitle="Los mas elegidos por la comunidad y selecciones destacadas."
+              light
+            />
+            <ProductCarousel autoPlayInterval={6000}>
+              {tendencias.map((producto, index) => (
+                <ProductCard key={producto.id} product={producto} compact revealIndex={index} />
+              ))}
+            </ProductCarousel>
+          </div>
+        </section>
+      )}
 
       <section
         className={`container section-space ${estilos["inicio__beneficios"]}`}
